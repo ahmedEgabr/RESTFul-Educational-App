@@ -1,8 +1,9 @@
-from .models import Lecture, Course, Unit, Topic
 import alteby.utils as general_utils
-from moviepy.editor import VideoFileClip, AudioFileClip
+from moviepy.editor import VideoFileClip
+from datetime import datetime
 
 def get_course(course_id, prefetch_related=None, select_related=None):
+    from .models import Course
     try:
         query = Course.objects
         if prefetch_related:
@@ -14,6 +15,7 @@ def get_course(course_id, prefetch_related=None, select_related=None):
         return None, False, general_utils.error('not_found')
 
 def get_lecture(lecture_id, course_id=None, prefetch_related=None, select_related=None):
+    from .models import Lecture
     try:
         query = Lecture.objects
         if prefetch_related:
@@ -30,6 +32,7 @@ def get_lecture(lecture_id, course_id=None, prefetch_related=None, select_relate
         return None, False, general_utils.error('not_found')
 
 def get_unit(filter_kwargs, prefetch_related=None, select_related=None):
+    from .models import Unit
     try:
         query = Unit.objects
         if prefetch_related:
@@ -63,7 +66,35 @@ def allowed_to_access_course(user, course):
     return False
 
 def is_enrolled(user, course):
-    return user.is_student and user.student_info.is_enrolled(course)
+    return user.is_student and user.student_profile.is_enrolled(course)
 
-def detect_video_duration(video_path):
-    return VideoFileClip(video_path).duration
+
+def get_resolution(quality):
+    if quality == 144:
+        return True, 176, 144
+    elif quality == 240:
+        return True, 426, 240
+    elif quality == 360:
+        return True, 640, 360
+    elif quality == 480:
+        return True, 854, 480
+    elif quality == 720:
+        return True, 1280, 720
+    elif quality == 1080:
+        return True, 1920, 1080
+    elif quality == 1440:
+        return True, 2560, 1440
+    elif quality == 2160:
+        return True, 3840, 2160
+    return False, 0, 0
+
+# this function is for initializing lecture path
+def get_lecture_path(instance, filename):
+    today = datetime.now()
+    return 'videos/course-{0}/unit-{1}/topic-{2}/lecture-{3}/{4}'.format(
+    instance.topic.unit.course.id,
+    instance.topic.unit.id,
+    instance.topic.id,
+    instance.id,
+    filename
+    )

@@ -3,7 +3,7 @@ from rest_framework.fields import CurrentUserDefault
 from courses.models import (
 Course, Unit, Topic,
 CourseActivity,
-Lecture, CoursePrivacy,
+Lecture, LectureQuality, CoursePrivacy,
 LecturePrivacy, Category,
 Quiz, QuizResult, Question, Choice,
 Attachement, Comment, Feedback
@@ -162,11 +162,20 @@ class DemoLectureSerializer(serializers.ModelSerializer):
     def get_has_text(self, lecture):
         return True if lecture.text else False
 
-class FullLectureSerializer(DemoLectureSerializer):
+class LectureQualitySerializer(serializers.ModelSerializer):
+    quality = serializers.SerializerMethodField()
+    class Meta:
+        model = LectureQuality
+        exclude = ('lecture', 'id')
 
+    def get_quality(self, lecture_quality):
+        return lecture_quality.get_quality_display()
+
+class FullLectureSerializer(DemoLectureSerializer):
+    qualities = LectureQualitySerializer(many=True, read_only=True)
     class Meta:
         model = Lecture
-        fields = ('id', 'topic', 'title', 'description', 'video', 'audio', 'text', 'duration', 'left_off_at', 'viewed', 'order', 'privacy')
+        fields = ('id', 'topic', 'title', 'description', 'video', 'qualities', 'audio', 'text', 'duration', 'left_off_at', 'viewed', 'order', 'privacy')
 
     def convert_duration(self, lecture):
         return seconds_to_duration(lecture.duration)

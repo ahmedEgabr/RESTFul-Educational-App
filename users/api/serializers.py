@@ -47,9 +47,6 @@ class SignUpSerializer(serializers.ModelSerializer):
         return user
 
 
-
-
-
 class AuthTokenSerializer(serializers.Serializer):
     email_or_username = serializers.CharField()
     password = serializers.CharField()
@@ -62,7 +59,7 @@ class AuthTokenSerializer(serializers.Serializer):
             # Check if user sent email
             if not validateEmail(email_or_username):
                 try:
-                    user_request = User.objects.get(username=email_or_username)
+                    user_request = User.objects.get(username=email_or_username, is_student=True)
                 except User.DoesNotExist:
                     msg = 'Unable to log in with provided credentials.'
                     raise serializers.ValidationError({
@@ -77,6 +74,13 @@ class AuthTokenSerializer(serializers.Serializer):
             if user:
                 if not user.is_active:
                     msg = 'User account is disabled.'
+                    raise serializers.ValidationError({
+                        'status': 'error',
+                        'message': msg
+                    })
+
+                if not user.get_student_profile():
+                    msg = 'You are not a student to login.'
                     raise serializers.ValidationError({
                         'status': 'error',
                         'message': msg

@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     # APPS
     'main',
     'users',
+    'teachers',
     'courses',
     'payment',
     'playlists',
@@ -93,7 +94,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'admin_reorder.middleware.ModelAdminReorder',
-    'alteby.middleware.CoursePermissionMiddleware'
+    'alteby.middleware.CoursePermissionMiddleware',
+    'django_currentuser.middleware.ThreadLocalUserMiddleware',
 
 ]
 
@@ -201,3 +203,11 @@ FILE_UPLOAD_HANDLERS = (
     "django.core.files.uploadhandler.MemoryFileUploadHandler",
     "django.core.files.uploadhandler.TemporaryFileUploadHandler",
 )
+
+# CELERY SETTINGSS
+BROKER_URL = env('BROKER_URL')
+CELERY_RESULT_BACKEND = env('BROKER_URL')
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'Africa/Cairo'

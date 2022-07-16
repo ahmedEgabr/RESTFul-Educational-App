@@ -4,6 +4,7 @@ from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.conf import settings
 from django.db.models import F
 from django.db import transaction
+from django.contrib.auth.models import Group
 
 # this class is for overriding default users manager of django user model
 class MyAccountManager(BaseUserManager):
@@ -78,6 +79,38 @@ class User(AbstractBaseUser, PermissionsMixin):
         )
         return anonymous_user
 
+    def create_student_profile(self):
+        if self.is_student:
+            return Student.objects.create(user=self)
+        return None
+
+    def get_student_profile(self):
+        if not self.is_student:
+            return None
+        if not hasattr(self, "student_profile"):
+            return None
+        if not self.student_profile.is_active:
+            return None
+        return self.student_profile
+
+    def create_teacher_profile(self):
+        if self.is_teacher:
+            teacher_profile = Teacher.objects.create(user=self)
+            teacher_group, created = Group.objects.get_or_create(name='Teachers')
+            self.groups.add(teacher_group)
+            return teacher_profile
+        return None
+
+    def get_teacher_profile(self):
+        if not self.is_teacher:
+            return None
+        if not hasattr(self, "teacher_profile"):
+            return None
+        if not self.teacher_profile.is_active:
+            return None
+        return self.teacher_profile
+
+
 class Student(models.Model):
 
     YEAR_IN_SCHOOL_CHOICES = [
@@ -96,11 +129,17 @@ class Student(models.Model):
         (6, 'Sixth'),
         (7, 'Seventh'),
     ]
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, primary_key=True, related_name="student_info")
+    user = models.OneToOneField(
+    settings.AUTH_USER_MODEL,
+    on_delete=models.CASCADE,
+    primary_key=True,
+    related_name="student_profile"
+    )
     major = models.CharField(blank=True, null=True, max_length=40)
     academic_year = models.IntegerField(blank=True, null=True, choices=ACADEMIC_YEAR)
     year_in_school = models.CharField(max_length=20, blank=True, null=True, choices=YEAR_IN_SCHOOL_CHOICES)
-
+    is_active = models.BooleanField(default=True)
+    
     def __str__(self):
         return self.user.email
 
@@ -108,8 +147,14 @@ class Student(models.Model):
         return course.id in self.user.enrollments.values_list('course', flat=True)
 
 class Teacher(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, primary_key=True, related_name="teacher_info")
+    user = models.OneToOneField(
+    settings.AUTH_USER_MODEL,
+    on_delete=models.CASCADE,
+    primary_key=True,
+    related_name="teacher_profile"
+    )
     major = models.CharField(blank=True, max_length=40)
+    is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return self.user.email

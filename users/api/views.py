@@ -61,9 +61,9 @@ class SignIn(APIView):
                 'username': user.username,
                 'first_name': user.first_name,
                 'last_name': user.last_name,
-                'year_in_school': user.student_info.year_in_school,
-                'academic_year': user.student_info.academic_year,
-                'major': user.student_info.major
+                'year_in_school': user.student_profile.year_in_school,
+                'academic_year': user.student_profile.academic_year,
+                'major': user.student_profile.major
             }
 
             return Response(response)
@@ -89,9 +89,9 @@ class SignUp(APIView):
                 'username': user.username,
                 'first_name': user.first_name,
                 'last_name': user.last_name,
-                'year_in_school': user.student_info.year_in_school,
-                'academic_year': user.student_info.academic_year,
-                'major': user.student_info.major
+                'year_in_school': user.student_profile.year_in_school,
+                'academic_year': user.student_profile.academic_year,
+                'major': user.student_profile.major
             }
         else:
             response = serializer.errors

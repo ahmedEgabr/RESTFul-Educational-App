@@ -2,10 +2,10 @@ from django.db import models
 from courses.models import Course
 from model_utils import Choices
 from django.conf import settings
-
+from main.models import UserActionModel, TimeStampedModel
 UserModel = settings.AUTH_USER_MODEL
 
-class CourseEnrollment(models.Model):
+class CourseEnrollment(UserActionModel):
 
     PAYMENT_METHODS = Choices(
         ('online', 'Online'),
