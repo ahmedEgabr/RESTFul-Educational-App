@@ -139,7 +139,7 @@ class Student(models.Model):
     academic_year = models.IntegerField(blank=True, null=True, choices=ACADEMIC_YEAR)
     year_in_school = models.CharField(max_length=20, blank=True, null=True, choices=YEAR_IN_SCHOOL_CHOICES)
     is_active = models.BooleanField(default=True)
-    
+
     def __str__(self):
         return self.user.email
 

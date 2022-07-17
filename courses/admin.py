@@ -20,10 +20,12 @@ QuizResult,
 QuizAttempt,
 Unit,
 Topic,
-LectureQuality
+LectureQuality,
+Note
 )
 from .tasks import detect_and_convert_lecture_qualities, extract_and_set_lecture_audio
 
+admin.site.register(Note)
 admin.site.register(QuizResult)
 admin.site.register(QuizAttempt)
 admin.site.register(Unit)
@@ -166,8 +168,8 @@ admin.site.register(CourseActivity)
 class CommentConfig(NestedModelAdmin):
     model = Comment
 
-    list_filter = ('user', 'object_type', 'date_created', 'status')
-    list_display = ('user', 'object_type', 'date_created', 'status')
+    list_filter = ('user', 'object_type', 'created_at', 'status')
+    list_display = ('user', 'object_type', 'created_at', 'status')
 
     fieldsets = (
         ("Comment Information", {'fields': ('user', 'object_type', 'object_id', 'comment_body', 'status')}),

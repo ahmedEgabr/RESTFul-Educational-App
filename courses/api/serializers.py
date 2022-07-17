@@ -4,7 +4,7 @@ from courses.models import (
 Course, Unit, Topic,
 CourseActivity,
 Lecture, LectureQuality, CoursePrivacy,
-LecturePrivacy, Category,
+LecturePrivacy,
 Quiz, QuizResult, Question, Choice,
 Attachement, Comment, Feedback
 )
