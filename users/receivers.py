@@ -19,7 +19,7 @@ def create_auth_token(sender, instance=None, created=False, **kwargs):
 @receiver(post_save, sender=UserModel)
 def create_user_profile(sender, instance=None, created=False, **kwargs):
 
-    if instance.is_student and not hasattr(instance, 'user_profile'):
+    if instance.is_student and not hasattr(instance, 'student_profile'):
         instance.create_student_profile()
     if instance.is_teacher and not hasattr(instance, 'teacher_profile'):
         instance.create_teacher_profile()

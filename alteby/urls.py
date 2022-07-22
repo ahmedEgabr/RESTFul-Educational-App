@@ -22,7 +22,7 @@ from drf_yasg import openapi
 from django.conf import settings
 from alteby.error_views import *
 from django.conf.urls.static import static
-from .admin_sites import teacher_admin
+from .admin_sites import teacher_admin, main_admin
 
 schema_view = get_schema_view(
    openapi.Info(
@@ -38,7 +38,7 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('admin/', main_admin.urls),
     path("teacher/", teacher_admin.urls),
 
     # Main

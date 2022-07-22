@@ -104,7 +104,7 @@ class Lecture(UserActionModel, TimeStampedModel):
 
     @classmethod
     def convert_video_quality(cls, video_path, quality):
-        from .utils import get_resolution
+        from courses.utils import get_resolution
 
         found, width, height = get_resolution(quality)
         if not found:

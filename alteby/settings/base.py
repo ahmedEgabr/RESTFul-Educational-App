@@ -51,7 +51,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'nested_inline',
-    'admin_reorder',
+    # 'admin_reorder',
     'rest_framework',
     'rest_framework.authtoken',
     'django_rest_passwordreset',
@@ -67,22 +67,22 @@ INSTALLED_APPS = [
     'categories'
 ]
 
-ADMIN_REORDER = (
-    # Keep original label and models
-    'auth',
-    'rest_framework',
-    'authtoken',
-    'users',
-    'playlists',
-    'categories',
-
-    # Reorder Courses models
-    {'app': 'courses', 'models': ('courses.Course', 'courses.Lecture', 'courses.CourseActivity', 'courses.Quiz', 'courses.QuizResult', 'courses.QuizAttempt')},
-
-    {'app': 'courses', 'label': 'Reports and Feedbacks' ,'models': ('courses.Report', 'courses.Feedback', 'courses.CorrectInfo', 'courses.Comment')},
-
-    'payment'
-)
+# ADMIN_REORDER = (
+#     # Keep original label and models
+#     'auth',
+#     'rest_framework',
+#     'authtoken',
+#     'users',
+#     'playlists',
+#     'categories',
+#
+#     # Reorder Courses models
+#     {'app': 'courses', 'models': ('courses.Course', 'courses.Lecture', 'courses.CourseActivity', 'courses.Quiz', 'courses.QuizResult', 'courses.QuizAttempt')},
+#
+#     {'app': 'courses', 'label': 'Reports and Feedbacks' ,'models': ('courses.Report', 'courses.Feedback', 'courses.CorrectInfo', 'courses.Comment')},
+#
+#     'payment'
+# )
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -93,7 +93,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'admin_reorder.middleware.ModelAdminReorder',
+    # 'admin_reorder.middleware.ModelAdminReorder',
     'alteby.middleware.CoursePermissionMiddleware',
     'django_currentuser.middleware.ThreadLocalUserMiddleware',
 
@@ -156,8 +156,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        # 'rest_framework.authentication.BasicAuthentication',
-        # 'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.TokenAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (

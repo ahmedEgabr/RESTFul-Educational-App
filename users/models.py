@@ -1,10 +1,11 @@
-from django.db import models
+from django.db import models, transaction
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, BaseUserManager, PermissionsMixin
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.conf import settings
 from django.db.models import F
 from django.db import transaction
 from django.contrib.auth.models import Group
+from alteby.constants import TEACHER_GROUP, STUDENT_GROUP
 
 # this class is for overriding default users manager of django user model
 class MyAccountManager(BaseUserManager):
@@ -80,8 +81,11 @@ class User(AbstractBaseUser, PermissionsMixin):
         return anonymous_user
 
     def create_student_profile(self):
-        if self.is_student:
-            return Student.objects.create(user=self)
+        if self.is_student and not hasattr(self, "student_profile"):
+            student_profile = Student.objects.create(user=self)
+            student_group, created = Group.objects.get_or_create(name=STUDENT_GROUP)
+            transaction.on_commit(lambda: self.groups.add(student_group))
+            return student_profile
         return None
 
     def get_student_profile(self):
@@ -94,10 +98,10 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self.student_profile
 
     def create_teacher_profile(self):
-        if self.is_teacher:
+        if self.is_teacher and not hasattr(self, "teacher_profile"):
             teacher_profile = Teacher.objects.create(user=self)
-            teacher_group, created = Group.objects.get_or_create(name='Teachers')
-            self.groups.add(teacher_group)
+            teacher_group, created = Group.objects.get_or_create(name=TEACHER_GROUP)
+            transaction.on_commit(lambda: self.groups.add(teacher_group))
             return teacher_profile
         return None
 

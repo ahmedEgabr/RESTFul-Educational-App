@@ -1,4 +1,5 @@
 from django.contrib import admin
+from alteby.admin_sites import main_admin
 from django.db import transaction
 from nested_inline.admin import NestedStackedInline, NestedModelAdmin
 from courses.models import (
@@ -25,12 +26,12 @@ Note
 )
 from .tasks import detect_and_convert_lecture_qualities, extract_and_set_lecture_audio
 
-admin.site.register(Note)
-admin.site.register(QuizResult)
-admin.site.register(QuizAttempt)
-admin.site.register(Unit)
-admin.site.register(Topic)
-admin.site.register(LectureQuality)
+main_admin.register(Note)
+main_admin.register(QuizResult)
+main_admin.register(QuizAttempt)
+main_admin.register(Unit)
+main_admin.register(Topic)
+main_admin.register(LectureQuality)
 
 class UnitTopicsInline(NestedStackedInline):
     model = Topic
@@ -87,7 +88,7 @@ class CourseConfig(NestedModelAdmin):
     inlines = [CoursePrivacyInline, CourseAttachementsInline, CourseUnitsInline]
 
 
-admin.site.register(Course, CourseConfig)
+main_admin.register(Course, CourseConfig)
 
 class LectureAttachementsInline(NestedStackedInline):
     model = LectureAttachement
@@ -162,8 +163,8 @@ class LectureConfig(NestedModelAdmin):
 
         return new_lecture
 
-admin.site.register(Lecture, LectureConfig)
-admin.site.register(CourseActivity)
+main_admin.register(Lecture, LectureConfig)
+main_admin.register(CourseActivity)
 
 class CommentConfig(NestedModelAdmin):
     model = Comment
@@ -175,7 +176,7 @@ class CommentConfig(NestedModelAdmin):
         ("Comment Information", {'fields': ('user', 'object_type', 'object_id', 'comment_body', 'status')}),
     )
 
-admin.site.register(Comment, CommentConfig)
+main_admin.register(Comment, CommentConfig)
 
 class FeedbackConfig(NestedModelAdmin):
     model = Feedback
@@ -189,9 +190,9 @@ class FeedbackConfig(NestedModelAdmin):
         ("Feedback Information", {'fields': ('user', 'course', 'rating', 'description')}),
     )
 
-admin.site.register(Feedback, FeedbackConfig)
-admin.site.register(CorrectInfo)
-admin.site.register(Report)
+main_admin.register(Feedback, FeedbackConfig)
+main_admin.register(CorrectInfo)
+main_admin.register(Report)
 
 
 
@@ -215,7 +216,7 @@ class QuizConfig(NestedModelAdmin):
     model = Quiz
     inlines = [QuestionInline]
 
-admin.site.register(Quiz, QuizConfig)
+main_admin.register(Quiz, QuizConfig)
 
 
 class RefrenceConfig(admin.ModelAdmin):
@@ -226,4 +227,4 @@ class RefrenceConfig(admin.ModelAdmin):
     list_display = ('name', 'type')
     readonly_fields = ('created_by', 'updated_by', 'created_at')
 
-admin.site.register(Reference, RefrenceConfig)
+main_admin.register(Reference, RefrenceConfig)

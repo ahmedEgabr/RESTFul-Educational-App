@@ -1,4 +1,5 @@
 from django.contrib import admin
+from alteby.admin_sites import main_admin
 from django.contrib.auth.admin import UserAdmin
 from users.models import User, Student, Teacher
 from django.contrib.auth.forms import (
@@ -38,6 +39,6 @@ class TeacherConfig(admin.ModelAdmin):
 
 
 # Register your models here.
-admin.site.register(User, UserConfig)
-admin.site.register(Student, StudentConfig)
-admin.site.register(Teacher, TeacherConfig)
+main_admin.register(User, UserConfig)
+main_admin.register(Student, StudentConfig)
+main_admin.register(Teacher, TeacherConfig)

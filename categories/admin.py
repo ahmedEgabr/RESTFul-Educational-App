@@ -1,5 +1,7 @@
 from django.contrib import admin
+from alteby.admin_sites import main_admin
 from .models import Category, ReferenceCategory, Tag
+
 
 class ReferenceCategoryConfig(admin.ModelAdmin):
     model = ReferenceCategory
@@ -9,6 +11,6 @@ class ReferenceCategoryConfig(admin.ModelAdmin):
     list_display = ('name', )
     readonly_fields = ('created_by', 'updated_by', 'created_at')
 
-admin.site.register(Category)
-admin.site.register(ReferenceCategory, ReferenceCategoryConfig)
-admin.site.register(Tag)
+main_admin.register(Category)
+main_admin.register(ReferenceCategory, ReferenceCategoryConfig)
+main_admin.register(Tag)
