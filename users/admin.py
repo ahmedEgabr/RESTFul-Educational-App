@@ -28,6 +28,7 @@ class StudentConfig(admin.ModelAdmin):
 
     fieldsets = (
         ("Student Account", {'fields': ('user', )}),
+        ('Status', {'fields': ('is_active', )}),
         ('Education', {'fields': ('major', 'academic_year', 'year_in_school')}),
     )
 
@@ -36,6 +37,12 @@ class TeacherConfig(admin.ModelAdmin):
 
     list_filter = ('major', )
     list_display = ('user', 'major')
+
+    fieldsets = (
+        ("Teacher Account", {'fields': ('user', )}),
+        ('Status', {'fields': ('is_active', )}),
+        ('Information', {'fields': ('major',)}),
+    )
 
 
 # Register your models here.

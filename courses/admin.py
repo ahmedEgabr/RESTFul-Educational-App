@@ -26,44 +26,81 @@ Note
 )
 from .tasks import detect_and_convert_lecture_qualities, extract_and_set_lecture_audio
 
-main_admin.register(Note)
+class NoteConfig(admin.ModelAdmin):
+    model = Note
+    list_filter = ('user', 'lecture')
+    list_display = ('user', 'lecture')
+
+    fieldsets = (
+        (None, {'fields': ('user', 'lecture', 'note')}),
+    )
+
+main_admin.register(Note, NoteConfig)
 main_admin.register(QuizResult)
 main_admin.register(QuizAttempt)
 main_admin.register(Unit)
 main_admin.register(Topic)
-main_admin.register(LectureQuality)
+
+class LectureQualityConfig(admin.ModelAdmin):
+    model = LectureQuality
+
+    list_filter = ('lecture',)
+    list_display = ('lecture', 'get_quality_display')
+
+    fieldsets = (
+        (None, {'fields': ('lecture', 'video', 'quality')}),
+    )
+
+main_admin.register(LectureQuality, LectureQualityConfig)
 
 class UnitTopicsInline(NestedStackedInline):
     model = Topic
+    exclude = ['created_by', 'updated_by']
     can_delete = True
     extra = 1
     verbose_name_plural = 'Topics'
     fk_name = 'unit'
-    readonly_fields = ('created_by', 'updated_by')
+    list_select_related = ['unit']
+
 
 class CourseUnitsInline(NestedStackedInline):
     model = Unit
+    exclude = ['created_by', 'updated_by']
     can_delete = True
     extra = 2
     verbose_name_plural = 'Units'
     fk_name = 'course'
     inlines = [UnitTopicsInline]
-    readonly_fields = ('created_by', 'updated_by')
+
+    def get_queryset(self, request):
+        qs = super(CourseUnitsInline, self).get_queryset(request)
+        return qs.select_related("course")
+
 
 class CoursePrivacyInline(NestedStackedInline):
     model = CoursePrivacy
+    exclude = ['created_by', 'updated_by']
     can_delete = False
     verbose_name_plural = 'Privacy'
     fk_name = 'course'
-    readonly_fields = ('created_by', 'updated_by')
+
+    def get_queryset(self, request):
+        qs = super(CoursePrivacyInline, self).get_queryset(request)
+        return qs.select_related("course")
 
 
 class CourseAttachementsInline(NestedStackedInline):
     model = CourseAttachement
+    exclude = ['created_by', 'updated_by']
     can_delete = True
     verbose_name_plural = 'Attachements'
     fk_name = 'course'
-    readonly_fields = ('created_by', 'updated_by')
+
+    def get_queryset(self, request):
+        qs = super(CourseAttachementsInline, self).get_queryset(request)
+        return qs.select_related("course")
+
+
 
 class CourseConfig(NestedModelAdmin):
     model = Course
@@ -76,6 +113,7 @@ class CourseConfig(NestedModelAdmin):
     fieldsets = (
         ("Course Information", {'fields': ('image', 'title', 'description', 'price', 'categories', 'tags', 'featured', 'quiz', 'created_by', 'updated_by')}),
     )
+
 
     @transaction.atomic
     def save_formset(self, request, form, formset, change):
@@ -92,30 +130,42 @@ main_admin.register(Course, CourseConfig)
 
 class LectureAttachementsInline(NestedStackedInline):
     model = LectureAttachement
+    exclude = ['created_by', 'updated_by']
     can_delete = True
     verbose_name_plural = 'Attachements'
     fk_name = 'lecture'
-    readonly_fields = ('created_by', 'updated_by')
+
+    def get_queryset(self, request):
+        qs = super(LectureAttachementsInline, self).get_queryset(request)
+        return qs.select_related("lecture")
 
 class LecturePrivacyInline(NestedStackedInline):
     model = LecturePrivacy
+    exclude = ['created_by', 'updated_by']
     can_delete = False
     verbose_name_plural = 'Privacy'
     fk_name = 'lecture'
-    readonly_fields = ('created_by', 'updated_by')
+
+    def get_queryset(self, request):
+        qs = super(LecturePrivacyInline, self).get_queryset(request)
+        return qs.select_related("lecture")
 
 
 class LectureReferenceInline(NestedStackedInline):
     model = LectureReference
+    exclude = ['created_by', 'updated_by']
     can_delete = False
     verbose_name_plural = 'References'
     fk_name = 'lecture'
-    readonly_fields = ('created_by', 'updated_by')
+
+    def get_queryset(self, request):
+        qs = super(LectureReferenceInline, self).get_queryset(request)
+        return qs.select_related("lecture")
+
 
 
 class LectureConfig(NestedModelAdmin):
     model = Lecture
-
     list_filter = ('topic', 'date_created')
     list_display = ('topic', 'title')
     readonly_fields = ('duration', 'audio', 'created_by', 'updated_by')
@@ -172,7 +222,18 @@ class LectureConfig(NestedModelAdmin):
         return new_lecture
 
 main_admin.register(Lecture, LectureConfig)
-main_admin.register(CourseActivity)
+
+class CourseActivityConfig(admin.ModelAdmin):
+    model = CourseActivity
+    list_filter = ('user', 'course', 'lecture', 'is_finished')
+    ordering = ('-created_at',)
+    list_display = ('user', 'course', 'lecture', 'is_finished')
+
+    fieldsets = (
+        (None, {'fields': ('user', 'course', 'lecture', 'left_off_at', 'is_finished')}),
+    )
+
+main_admin.register(CourseActivity, CourseActivityConfig)
 
 class CommentConfig(NestedModelAdmin):
     model = Comment
