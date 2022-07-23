@@ -1,6 +1,7 @@
 from django.db import models
 from main.models import UserActionModel, TimeStampedModel
 
+
 class Reference(UserActionModel, TimeStampedModel):
 
     class ReferenceType(models.TextChoices):
@@ -15,5 +16,11 @@ class Reference(UserActionModel, TimeStampedModel):
     link = models.URLField(blank=True)
     categories = models.ManyToManyField("categories.ReferenceCategory", blank=True)
 
+    class Meta:
+        abstract = True
+
     def __str__(self):
         return self.name
+
+class LectureReference(Reference):
+    lecture = models.ForeignKey("courses.Lecture", on_delete=models.CASCADE, related_name="references")

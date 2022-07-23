@@ -1,5 +1,5 @@
 from django.contrib.auth import authenticate
-from users.models import User, Student
+from users.models import User, Student, Teacher
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
@@ -132,3 +132,17 @@ class StudentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Student
         fields = '__all__'
+
+class TeacherSerializer(serializers.ModelSerializer):
+    id = serializers.SerializerMethodField()
+    username = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Teacher
+        fields = ("id", "username")
+
+    def get_id(self, teacher_profile):
+        return teacher_profile.user_id
+
+    def get_username(self, teacher_profile):
+        return teacher_profile.user.username

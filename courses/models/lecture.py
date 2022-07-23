@@ -21,7 +21,6 @@ class Lecture(UserActionModel, TimeStampedModel):
     quiz = models.OneToOneField("courses.Quiz", on_delete=models.CASCADE, blank=True, null=True)
     date_created = models.DateTimeField(auto_now_add=True)
     teacher = models.ForeignKey("users.Teacher", blank=True, null=True, on_delete=models.CASCADE, related_name="contributed_lectures")
-    references = models.ManyToManyField("courses.Reference", blank=True)
 
     class Meta:
         ordering = ('-date_created', )

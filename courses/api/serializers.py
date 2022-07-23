@@ -6,13 +6,16 @@ CourseActivity,
 Lecture, LectureQuality, CoursePrivacy,
 LecturePrivacy,
 Quiz, QuizResult, Question, Choice,
-Attachement, Comment, Feedback
+Attachement, Comment, Feedback,
+LectureReference
 )
 from alteby.utils import seconds_to_duration
 from categories.api.serializers import CategorySerializer, TagSerializer
 from django.db.models import Sum
 from payment.models import CourseEnrollment
 from courses.utils import allowed_to_access_lecture
+from users.api.serializers import TeacherSerializer
+
 
 class LectureIndexSerialiser(serializers.ModelSerializer):
 
@@ -138,6 +141,7 @@ class CourseActivitySerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class DemoLectureSerializer(serializers.ModelSerializer):
+    teacher = TeacherSerializer(many=False, read_only=True)
     viewed = serializers.BooleanField()
     left_off_at = serializers.FloatField()
     privacy = LecturePrivacySerializer(many=False, read_only=True)
@@ -147,7 +151,7 @@ class DemoLectureSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Lecture
-        fields = ('id', 'title', 'description', 'order', 'topic', 'privacy', 'duration', 'left_off_at', 'viewed', 'has_video', 'has_audio', 'has_text')
+        fields = ('id', 'title', 'description', 'order', 'topic', 'privacy', 'teacher', 'duration', 'left_off_at', 'viewed', 'has_video', 'has_audio', 'has_text')
 
     def is_viewed(self, lecture):
         user = self.context.get('request', None).user
@@ -171,11 +175,19 @@ class LectureQualitySerializer(serializers.ModelSerializer):
     def get_quality(self, lecture_quality):
         return lecture_quality.get_quality_display()
 
+
+class LectureReferenceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LectureReference
+        fields = "__all__"
+
+
 class FullLectureSerializer(DemoLectureSerializer):
+    teacher = TeacherSerializer(many=False, read_only=True)
     qualities = LectureQualitySerializer(many=True, read_only=True)
     class Meta:
         model = Lecture
-        fields = ('id', 'topic', 'title', 'description', 'video', 'qualities', 'audio', 'text', 'duration', 'left_off_at', 'viewed', 'order', 'privacy')
+        fields = ('id', 'topic', 'title', 'description', 'video', 'qualities', 'teacher', 'audio', 'text', 'duration', 'left_off_at', 'viewed', 'order', 'privacy')
 
     def convert_duration(self, lecture):
         return seconds_to_duration(lecture.duration)
@@ -270,6 +282,7 @@ class CourseSerializer(serializers.ModelSerializer, QuerySerializerMixin):
     privacy = CoursePrivacySerializer(many=False, read_only=True)
     categories = CategorySerializer(many=True, read_only=True)
     tags = TagSerializer(many=True, read_only=True)
+    teachers = serializers.SerializerMethodField()
 
     PREFETCH_FIELDS = ['categories__course_set', 'privacy__shared_with']
 
@@ -279,7 +292,7 @@ class CourseSerializer(serializers.ModelSerializer, QuerySerializerMixin):
         fields = (
         'id', 'image', 'title',
         'description', 'date_created',
-        'categories', 'tags', 'price',
+        'categories', 'tags', 'teachers', 'price',
         'privacy', 'quiz',
         'units_count', 'lectures_count', 'course_duration', 'progress', 'is_enrolled', 'is_finished')
 
@@ -302,6 +315,11 @@ class CourseSerializer(serializers.ModelSerializer, QuerySerializerMixin):
 
     def format_lectures_duration(self, course):
         return seconds_to_duration(course.course_duration)
+
+    def get_teachers(self, course):
+        teachers = course.get_contributed_teachers()
+        serializer = TeacherSerializer(teachers, many=True)
+        return serializer.data
 
 
 class CoursesSerializer(serializers.ModelSerializer, QuerySerializerMixin):

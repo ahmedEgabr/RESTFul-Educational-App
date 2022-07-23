@@ -11,7 +11,7 @@ TopicDetailSerializer, UnitTopicsSerializer, DemoLectureSerializer,
 FullLectureSerializer, QuizSerializer,
 QuizResultSerializer, AttachementSerializer,
 CommentSerializer, FeedbackSerializer,
-QuestionSerializer
+QuestionSerializer, LectureReferenceSerializer
 )
 from courses.models import Course, Unit, Topic, CourseActivity, Lecture, Comment, Feedback, Quiz, Question, Choice, QuizResult
 from playlists.models import WatchHistory
@@ -488,6 +488,29 @@ class LectureAttachement(APIView):
             return Response(serializer.data)
 
         return Response(general_utils.error('access_denied'), status=status.HTTP_403_FORBIDDEN)
+
+
+class LectureReference(APIView):
+
+    def get(self, request, course_id, unit_id, topic_id, lecture_id, format=None):
+
+        filter_kwargs = {
+        'id': lecture_id,
+        'topic__id': topic_id,
+        'topic__unit__id': unit_id,
+        'topic__unit__course__id': course_id
+        }
+        lecture, found, error = utils.get_object(model=Lecture, filter_kwargs=filter_kwargs)
+        if not found:
+            return Response(error, status=status.HTTP_404_NOT_FOUND)
+
+        if utils.allowed_to_access_lecture(request.user, lecture):
+            references = lecture.references.all()
+            serializer = LectureReferenceSerializer(references, many=True, context={'request': request})
+            return Response(serializer.data)
+
+        return Response(general_utils.error('access_denied'), status=status.HTTP_403_FORBIDDEN)
+
 
 class CourseComments(APIView):
     def get(self, request, course_id, format=None):

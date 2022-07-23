@@ -15,5 +15,5 @@ from .comment import Comment
 from .feedback import Feedback
 from .correct_info import CorrectInfo
 from .report import Report
-from .reference import Reference
+from .reference import LectureReference
 from .note import Note

@@ -8,7 +8,8 @@ LectureDetail, CourseComments,
 CourseFeedbacks, LectureComments,
 QuizDetail, CourseQuizAnswer, LectureQuizAnswer,
 CourseQuizResult, LectureQuizResult,
-CourseAttachement, LectureAttachement
+CourseAttachement, LectureAttachement,
+LectureReference
 )
 
 app_name = 'courses'
@@ -43,6 +44,7 @@ urlpatterns = [
   path('<int:course_id>/units/<int:unit_id>/topics/<int:topic_id>/lectures/<int:lecture_id>/quiz/result', LectureQuizResult.as_view(), name='lecture_quiz_result'),
   path('<int:course_id>/units/<int:unit_id>/topics/<int:topic_id>/lectures/<int:lecture_id>/quiz/answer', LectureQuizAnswer.as_view(), name='lecture_quiz_answer'),
   path('<int:course_id>/units/<int:unit_id>/topics/<int:topic_id>/lectures/<int:lecture_id>/attachements', LectureAttachement.as_view(), name='lecture_attachment'),
+  path('<int:course_id>/units/<int:unit_id>/topics/<int:topic_id>/lectures/<int:lecture_id>/references', LectureReference.as_view(), name='lecture_reference'),
 
   # Lectures API
   path('<int:course_id>/lectures/', LecturesList.as_view(), name='lectures'), # DEPRECATED

@@ -12,7 +12,7 @@ Comment,
 Feedback,
 CorrectInfo,
 Report,
-Reference,
+LectureReference,
 Feedback,
 Quiz,
 Question,
@@ -104,6 +104,15 @@ class LecturePrivacyInline(NestedStackedInline):
     fk_name = 'lecture'
     readonly_fields = ('created_by', 'updated_by')
 
+
+class LectureReferenceInline(NestedStackedInline):
+    model = LectureReference
+    can_delete = False
+    verbose_name_plural = 'References'
+    fk_name = 'lecture'
+    readonly_fields = ('created_by', 'updated_by')
+
+
 class LectureConfig(NestedModelAdmin):
     model = Lecture
 
@@ -124,13 +133,12 @@ class LectureConfig(NestedModelAdmin):
                     'order',
                     'quiz',
                     'teacher',
-                    'references',
                     'created_by',
                     'updated_by')
                 }),
     )
 
-    inlines = [LecturePrivacyInline, LectureAttachementsInline]
+    inlines = [LecturePrivacyInline, LectureAttachementsInline, LectureReferenceInline]
 
     def save_model(self, request, new_lecture, form, change):
         # Update lecture duration
@@ -217,14 +225,3 @@ class QuizConfig(NestedModelAdmin):
     inlines = [QuestionInline]
 
 main_admin.register(Quiz, QuizConfig)
-
-
-class RefrenceConfig(admin.ModelAdmin):
-    model = Reference
-
-    list_filter = ('categories', 'created_by', 'created_at')
-    ordering = ('-created_at',)
-    list_display = ('name', 'type')
-    readonly_fields = ('created_by', 'updated_by', 'created_at')
-
-main_admin.register(Reference, RefrenceConfig)

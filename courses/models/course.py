@@ -7,7 +7,7 @@ from courses.models.lecture import Lecture
 from courses.models.topic import Topic
 from courses.models.course_privacy import CoursePrivacy
 from courses.models.activity import CourseActivity
-from users.models import User
+from users.models import User, Teacher
 
 
 class Course(UserActionModel):
@@ -60,11 +60,15 @@ class Course(UserActionModel):
         activity = self.activity.filter(user=user, lecture__in=lectures).count()
         return len(lectures) == activity
 
-    def get_contributed_teachers(self):
+    def get_lectures(self):
         course_units_ids = self.units.values_list('id', flat=True)
         course_topics_ids = Topic.objects.filter(unit__in=course_units_ids).values_list('id', flat=True)
-        teachers_ids_list = Lecture.objects.filter(topic__in=course_topics_ids).values_list("teacher", flat=True)
-        teachers_list = User.objects.filter(id__in=teachers_ids_list)
+        lectures = Lecture.objects.filter(topic__in=course_topics_ids)
+        return lectures
+
+    def get_contributed_teachers(self):
+        teachers_ids_list = self.get_lectures().values_list("teacher", flat=True)
+        teachers_list = Teacher.objects.filter(user_id__in=teachers_ids_list)
         return teachers_list
 
     @property
