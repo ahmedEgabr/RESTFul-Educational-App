@@ -9,7 +9,7 @@ CourseFeedbacks, LectureComments,
 QuizDetail, CourseQuizAnswer, LectureQuizAnswer,
 CourseQuizResult, LectureQuizResult,
 CourseAttachement, LectureAttachement,
-LectureReference
+LectureReference, CourseTreeLecturesList
 )
 
 app_name = 'courses'
@@ -30,6 +30,7 @@ urlpatterns = [
   path('<int:course_id>/attachements', CourseAttachement.as_view(), name='course_attachment'),
 
   # Units API
+  path('<int:course_id>/lectures/', CourseTreeLecturesList.as_view(), name='lectures'),
   path('<int:course_id>/units/', CourseUnitsList.as_view(), name='units'),
   path('<int:course_id>/units/<int:unit_id>', UnitDetail.as_view(), name='unit'),
   # Topics API

@@ -278,6 +278,34 @@ class LecturesList(APIView, PageNumberPagination):
         serializer = DemoLectureSerializer(lectures, many=True, context={'request': request})
         return self.get_paginated_response(serializer.data)
 
+
+class CourseTreeLecturesList(APIView, PageNumberPagination):
+
+    def get(self, request, course_id, format=None):
+        lectures_ids = request.data.get("lectures_ids")
+        if not isinstance(lectures_ids, list):
+            error = general_utils.error('required_fields')
+            return Response(error, status=status.HTTP_400_BAD_REQUEST)
+
+        filter_kwargs = {
+        'id': course_id
+        }
+        course, found, error = utils.get_object(model=Course, filter_kwargs=filter_kwargs)
+        if not found:
+            return Response(error, status=status.HTTP_404_NOT_FOUND)
+
+        lectures = Lecture.objects.select_related('privacy').prefetch_related('privacy__shared_with').filter(
+        id__in=lectures_ids, topic__unit__course__id=course_id
+        ).annotate(
+                viewed=Exists(
+                            CourseActivity.objects.filter(lecture=OuterRef('pk'), user=self.request.user, is_finished=True)
+                            ),
+                left_off_at=Coalesce(Subquery(CourseActivity.objects.filter(lecture=OuterRef('pk'), user=self.request.user).values('left_off_at')), 0, output_field=FloatField())
+        )
+        lectures = self.paginate_queryset(lectures, request, view=self)
+        serializer = DemoLectureSerializer(lectures, many=True, context={'request': request})
+        return self.get_paginated_response(serializer.data)
+
 class QuizDetail(APIView):
 
     def get(self, request, course_id, unit_id=None, topic_id=None, lecture_id=None, format=None):
