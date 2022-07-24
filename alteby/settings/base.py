@@ -43,6 +43,8 @@ INTERNAL_IPS = [
 # Application definition
 
 INSTALLED_APPS = [
+    'dal',
+    'dal_select2',
     'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',

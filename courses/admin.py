@@ -2,6 +2,7 @@ from django.contrib import admin
 from alteby.admin_sites import main_admin
 from django.db import transaction
 from nested_inline.admin import NestedStackedInline, NestedModelAdmin
+from .admin_forms import LectureForm
 from courses.models import (
 Course, CoursePrivacy,
 CourseAttachement,
@@ -9,11 +10,11 @@ LectureAttachement,
 LectureExternalLink,
 Lecture, LecturePrivacy,
 CourseActivity,
+Reference,
 Comment,
 Feedback,
 CorrectInfo,
 Report,
-LectureReference,
 Feedback,
 Quiz,
 Question,
@@ -26,6 +27,7 @@ LectureQuality,
 Note
 )
 from .tasks import detect_and_convert_lecture_qualities, extract_and_set_lecture_audio
+
 
 class NoteConfig(admin.ModelAdmin):
     model = Note
@@ -41,6 +43,7 @@ main_admin.register(QuizResult)
 main_admin.register(QuizAttempt)
 main_admin.register(Unit)
 main_admin.register(Topic)
+main_admin.register(Reference)
 
 class LectureQualityConfig(admin.ModelAdmin):
     model = LectureQuality
@@ -103,7 +106,6 @@ class CourseAttachementsInline(NestedStackedInline):
         return qs.select_related("course")
 
 
-
 class CourseConfig(NestedModelAdmin):
     model = Course
 
@@ -154,19 +156,6 @@ class LecturePrivacyInline(NestedStackedInline):
         return qs.select_related("lecture")
 
 
-class LectureReferenceInline(NestedStackedInline):
-    model = LectureReference
-    exclude = ['created_by', 'updated_by']
-    can_delete = True
-    extra = 1
-    verbose_name_plural = 'References'
-    fk_name = 'lecture'
-
-    def get_queryset(self, request):
-        qs = super(LectureReferenceInline, self).get_queryset(request)
-        return qs.select_related("lecture")
-
-
 class LectureExternalLinkInline(NestedStackedInline):
     model = LectureExternalLink
     exclude = ['created_by', 'updated_by']
@@ -182,30 +171,12 @@ class LectureExternalLinkInline(NestedStackedInline):
 
 class LectureConfig(NestedModelAdmin):
     model = Lecture
+    form = LectureForm
     list_filter = ('topic', 'date_created')
     list_display = ('topic', 'title')
     readonly_fields = ('duration', 'audio', 'created_by', 'updated_by')
 
-    fieldsets = (
-        ("Lecture Information", {
-        'fields': (
-                    'title',
-                    'description',
-                    'objectives',
-                    'topic',
-                    'video',
-                    'audio',
-                    'script',
-                    'duration',
-                    'order',
-                    'quiz',
-                    'teacher',
-                    'created_by',
-                    'updated_by')
-                }),
-    )
-
-    inlines = [LecturePrivacyInline, LectureAttachementsInline, LectureReferenceInline, LectureExternalLinkInline]
+    inlines = [LecturePrivacyInline, LectureAttachementsInline, LectureExternalLinkInline]
 
     def save_model(self, request, new_lecture, form, change):
         # Update lecture duration
