@@ -10,6 +10,7 @@ class Reference(UserActionModel, TimeStampedModel):
         link = "link", ("Link")
         paper = "paper", ("Paper")
         journal = "journal", ("Journal")
+        article = "article", ("Article")
 
     name = models.CharField(max_length=100)
     type = models.CharField(choices=ReferenceType.choices, max_length=20)
