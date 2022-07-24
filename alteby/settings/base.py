@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'django_filters',
     'drf_yasg',
     'django_seed',
+    'ckeditor',
 
     # APPS
     'main',
@@ -213,3 +214,14 @@ CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Africa/Cairo'
+
+# CK Ediotor
+CKEDITOR_UPLOAD_PATH = "ckeditor/"
+CKEDITOR_CONFIGS = {
+    'default': {
+        'skin': 'office2013',
+        'toolbar': 'full',
+        'height': "100%",
+        'width': "100%",
+    },
+}

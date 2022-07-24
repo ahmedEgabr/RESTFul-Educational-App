@@ -128,12 +128,12 @@ class QuizResultSerializer(serializers.ModelSerializer):
 class CoursePrivacySerializer(serializers.ModelSerializer):
     class Meta:
         model = CoursePrivacy
-        fields = '__all__'
+        exclude = ("created_at", "updated_at")
 
 class LecturePrivacySerializer(serializers.ModelSerializer):
     class Meta:
         model = LecturePrivacy
-        fields = '__all__'
+        exclude = ("created_at", "updated_at")
 
 class CourseActivitySerializer(serializers.ModelSerializer):
     class Meta:
@@ -147,11 +147,27 @@ class DemoLectureSerializer(serializers.ModelSerializer):
     privacy = LecturePrivacySerializer(many=False, read_only=True)
     has_video = serializers.SerializerMethodField()
     has_audio = serializers.SerializerMethodField()
-    has_text = serializers.SerializerMethodField()
+    has_script = serializers.SerializerMethodField()
 
     class Meta:
         model = Lecture
-        fields = ('id', 'title', 'description', 'order', 'topic', 'privacy', 'teacher', 'duration', 'left_off_at', 'viewed', 'has_video', 'has_audio', 'has_text')
+        fields = (
+        'id',
+        'title',
+        'description',
+        'objectives',
+        'order',
+        'topic',
+        'privacy',
+        'teacher',
+        'duration',
+        'left_off_at',
+        'viewed',
+        'has_video',
+        'has_audio',
+        'has_script',
+        'updated_at'
+        )
 
     def is_viewed(self, lecture):
         user = self.context.get('request', None).user
@@ -163,8 +179,8 @@ class DemoLectureSerializer(serializers.ModelSerializer):
     def get_has_audio(self, lecture):
         return True if lecture.audio else False
 
-    def get_has_text(self, lecture):
-        return True if lecture.text else False
+    def get_has_script(self, lecture):
+        return True if lecture.script else False
 
 class LectureQualitySerializer(serializers.ModelSerializer):
     quality = serializers.SerializerMethodField()
@@ -187,7 +203,23 @@ class FullLectureSerializer(DemoLectureSerializer):
     qualities = LectureQualitySerializer(many=True, read_only=True)
     class Meta:
         model = Lecture
-        fields = ('id', 'topic', 'title', 'description', 'video', 'qualities', 'teacher', 'audio', 'text', 'duration', 'left_off_at', 'viewed', 'order', 'privacy')
+        fields = (
+        'id',
+        'topic',
+        'title',
+        'description',
+        'objectives',
+        'video',
+        'qualities',
+        'teacher',
+        'audio',
+        'script',
+        'duration',
+        'left_off_at',
+        'viewed',
+        'order',
+        'privacy'
+        )
 
     def convert_duration(self, lecture):
         return seconds_to_duration(lecture.duration)

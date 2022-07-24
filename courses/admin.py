@@ -175,10 +175,11 @@ class LectureConfig(NestedModelAdmin):
         'fields': (
                     'title',
                     'description',
+                    'objectives',
                     'topic',
                     'video',
                     'audio',
-                    'text',
+                    'script',
                     'duration',
                     'order',
                     'quiz',

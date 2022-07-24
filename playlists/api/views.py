@@ -3,12 +3,14 @@ from rest_framework.decorators import api_view
 from rest_framework.views import APIView
 from .serializers import PlaylistSerializer, FavoriteSerializer, WatchHistorySerializer
 from playlists.models import Playlist, Favorite, WatchHistory
-from courses.api.serializers import FullLectureSerializer
-from courses.models import Lecture
+from courses.api.serializers import DemoLectureSerializer
+from courses.models import Lecture, CourseActivity
 import courses.utils as utils
 import alteby.utils as general_utils
 from rest_framework import status
 from rest_framework.pagination import PageNumberPagination
+from django.db.models.functions import Coalesce
+from django.db.models import OuterRef, Exists, Subquery, FloatField
 
 class PlaylistList(APIView, PageNumberPagination):
     """
@@ -188,7 +190,13 @@ class WatchHistoryList(APIView, PageNumberPagination):
 
     def get(self, request, format=None):
         user_watch_history, created = WatchHistory.objects.get_or_create(user=request.user)
-        user_watch_history_lectures = user_watch_history.lectures.prefetch_related('privacy__shared_with')
+        user_watch_history_lectures = user_watch_history.lectures.prefetch_related('privacy__shared_with').annotate(
+                viewed=Exists(
+                            CourseActivity.objects.filter(lecture=OuterRef('pk'), user=self.request.user, is_finished=True)
+                            ),
+                left_off_at=Coalesce(Subquery(CourseActivity.objects.filter(lecture=OuterRef('pk'), user=self.request.user).values('left_off_at')), 0, output_field=FloatField())
+        ).all()
+
         user_watch_history_lectures = self.paginate_queryset(user_watch_history_lectures, request, view=self)
-        serializer = FullLectureSerializer(user_watch_history_lectures, many=True, context={'request': request})
+        serializer = DemoLectureSerializer(user_watch_history_lectures, many=True, context={'request': request})
         return self.get_paginated_response(serializer.data)

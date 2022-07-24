@@ -1,5 +1,6 @@
 from pathlib import Path
 import cv2
+from ckeditor.fields import RichTextField
 from django.db import models
 from django.contrib.contenttypes.models import ContentType
 from main.models import UserActionModel, TimeStampedModel
@@ -12,10 +13,11 @@ from courses.utils import get_lecture_path
 class Lecture(UserActionModel, TimeStampedModel):
     topic = models.ForeignKey("courses.Topic", on_delete=models.CASCADE, related_name="lectures")
     title = models.CharField(max_length=100)
-    description = models.TextField()
+    description = RichTextField()
+    objectives = RichTextField(blank=True, null=True)
     video = models.FileField(upload_to=get_lecture_path, blank=True, null=True)
     audio = models.FileField(upload_to='audio', blank=True, null=True)
-    text = models.TextField(blank=True, null=True, max_length=100)
+    script = RichTextField(blank=True, null=True, max_length=100)
     duration = models.FloatField(blank=True, default=0)
     order = models.IntegerField()
     quiz = models.OneToOneField("courses.Quiz", on_delete=models.CASCADE, blank=True, null=True)
