@@ -3,25 +3,40 @@ from nested_inline.admin import NestedModelAdmin
 from django.db import transaction
 from alteby.admin_sites import teacher_admin
 from courses.admin import (
-UnitTopicsInline, CourseUnitsInline, CoursePrivacyInline, CourseAttachementsInline,
-LectureAttachementsInline, LecturePrivacyInline
+UnitTopicsInline, CourseUnitsInline, CoursePrivacyInline, CourseAttachementsInline, CoursePriceInline,
+LectureAttachementsInline, LecturePrivacyInline, LectureExternalLinkInline
 )
 from courses.models import Course, Lecture
 from .admin_forms import LectureForm, CourseEnrollmentForm
 from payment.models import CourseEnrollment
-
+from .admin_forms import LectureForm
+from courses.tasks import detect_and_convert_lecture_qualities, extract_and_set_lecture_audio
 
 @admin.register(Course, site=teacher_admin)
 class CourseConfig(NestedModelAdmin):
     model = Course
 
-    list_filter = ('categories', 'date_created')
+    list_filter = ('categories', 'language', 'price', 'created_by', 'updated_by', 'date_created')
     ordering = ('-date_created',)
     list_display = ('title', 'date_created')
     readonly_fields = ('created_by', 'updated_by')
 
     fieldsets = (
-        ("Course Information", {'fields': ('image', 'title', 'description', 'price', 'categories', 'tags', 'featured', 'quiz', 'created_by', 'updated_by')}),
+        ("Course Information", {
+        'fields': (
+        'image',
+        'title',
+        'description',
+        'objectives',
+        'about',
+        'price',
+        'language',
+        'categories',
+        'tags',
+        'featured',
+        'created_by',
+        'updated_by'
+        )}),
     )
 
     def get_queryset(self, request):
@@ -38,7 +53,7 @@ class CourseConfig(NestedModelAdmin):
             print(e)
             pass
 
-    inlines = [CoursePrivacyInline, CourseAttachementsInline, CourseUnitsInline]
+    inlines = [CoursePrivacyInline, CourseAttachementsInline, CourseUnitsInline, CoursePriceInline]
 
 
 @admin.register(Lecture, site=teacher_admin)
@@ -50,11 +65,7 @@ class LectureConfig(NestedModelAdmin):
     list_display = ('topic', 'title')
     readonly_fields = ('duration', 'audio', 'created_by', 'updated_by')
 
-    fieldsets = (
-        ("Lecture Information", {'fields': ('title', 'description', 'topic', 'video', 'audio', 'text', 'duration', 'order', 'quiz', 'teacher', 'references', 'created_by', 'updated_by')}),
-    )
-
-    inlines = [LecturePrivacyInline, LectureAttachementsInline]
+    inlines = [LecturePrivacyInline, LectureAttachementsInline, LectureExternalLinkInline]
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)

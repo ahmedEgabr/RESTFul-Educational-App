@@ -5,6 +5,8 @@ from users.models import User, Student, Teacher
 from django.contrib.auth.forms import (
     AdminPasswordChangeForm
 )
+from django.contrib.auth.admin import GroupAdmin
+from django.contrib.auth.models import Group
 
 class UserConfig(UserAdmin):
     model = User
@@ -49,3 +51,4 @@ class TeacherConfig(admin.ModelAdmin):
 main_admin.register(User, UserConfig)
 main_admin.register(Student, StudentConfig)
 main_admin.register(Teacher, TeacherConfig)
+main_admin.register(Group, GroupAdmin)
