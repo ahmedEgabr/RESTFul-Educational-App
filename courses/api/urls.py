@@ -9,7 +9,7 @@ CourseFeedbacks, LectureComments,
 QuizDetail, CourseQuizAnswer, LectureQuizAnswer,
 CourseQuizResult, LectureQuizResult,
 CourseAttachement, LectureAttachement,
-CourseTreeLecturesList, LectureExternalLinksList
+CourseTreeLecturesList, LectureExternalLinksList, LectureReferenceList
 )
 
 app_name = 'courses'
@@ -46,6 +46,7 @@ urlpatterns = [
   path('<int:course_id>/units/<int:unit_id>/topics/<int:topic_id>/lectures/<int:lecture_id>/quiz/answer', LectureQuizAnswer.as_view(), name='lecture_quiz_answer'),
   path('<int:course_id>/units/<int:unit_id>/topics/<int:topic_id>/lectures/<int:lecture_id>/attachements', LectureAttachement.as_view(), name='lecture_attachment'),
   path('<int:course_id>/units/<int:unit_id>/topics/<int:topic_id>/lectures/<int:lecture_id>/external_links', LectureExternalLinksList.as_view(), name='external_links'),
+  path('<int:course_id>/units/<int:unit_id>/topics/<int:topic_id>/lectures/<int:lecture_id>/references', LectureReferenceList.as_view(), name='references'),
 
   # Lectures API
   path('<int:course_id>/lectures/', LecturesList.as_view(), name='lectures'), # DEPRECATED
