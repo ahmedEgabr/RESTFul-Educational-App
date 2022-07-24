@@ -7,7 +7,7 @@ Lecture, LectureQuality, CoursePrivacy,
 LecturePrivacy,
 Quiz, QuizResult, Question, Choice,
 Attachement, Comment, Feedback,
-LectureReference
+LectureReference, LectureExternalLink
 )
 from alteby.utils import seconds_to_duration
 from categories.api.serializers import CategorySerializer, TagSerializer
@@ -195,6 +195,12 @@ class LectureQualitySerializer(serializers.ModelSerializer):
 class LectureReferenceSerializer(serializers.ModelSerializer):
     class Meta:
         model = LectureReference
+        fields = "__all__"
+
+
+class LectureExternalLinkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LectureExternalLink
         fields = "__all__"
 
 

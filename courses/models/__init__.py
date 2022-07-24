@@ -17,3 +17,4 @@ from .correct_info import CorrectInfo
 from .report import Report
 from .reference import LectureReference
 from .note import Note
+from .lecture_external_link import LectureExternalLink

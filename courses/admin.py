@@ -6,6 +6,7 @@ from courses.models import (
 Course, CoursePrivacy,
 CourseAttachement,
 LectureAttachement,
+LectureExternalLink,
 Lecture, LecturePrivacy,
 CourseActivity,
 Comment,
@@ -93,6 +94,7 @@ class CourseAttachementsInline(NestedStackedInline):
     model = CourseAttachement
     exclude = ['created_by', 'updated_by']
     can_delete = True
+    extra = 1
     verbose_name_plural = 'Attachements'
     fk_name = 'course'
 
@@ -132,6 +134,7 @@ class LectureAttachementsInline(NestedStackedInline):
     model = LectureAttachement
     exclude = ['created_by', 'updated_by']
     can_delete = True
+    extra = 1
     verbose_name_plural = 'Attachements'
     fk_name = 'lecture'
 
@@ -154,7 +157,8 @@ class LecturePrivacyInline(NestedStackedInline):
 class LectureReferenceInline(NestedStackedInline):
     model = LectureReference
     exclude = ['created_by', 'updated_by']
-    can_delete = False
+    can_delete = True
+    extra = 1
     verbose_name_plural = 'References'
     fk_name = 'lecture'
 
@@ -162,6 +166,18 @@ class LectureReferenceInline(NestedStackedInline):
         qs = super(LectureReferenceInline, self).get_queryset(request)
         return qs.select_related("lecture")
 
+
+class LectureExternalLinkInline(NestedStackedInline):
+    model = LectureExternalLink
+    exclude = ['created_by', 'updated_by']
+    can_delete = True
+    extra = 1
+    verbose_name_plural = 'External Links'
+    fk_name = 'lecture'
+
+    def get_queryset(self, request):
+        qs = super(LectureExternalLinkInline, self).get_queryset(request)
+        return qs.select_related("lecture")
 
 
 class LectureConfig(NestedModelAdmin):
@@ -189,7 +205,7 @@ class LectureConfig(NestedModelAdmin):
                 }),
     )
 
-    inlines = [LecturePrivacyInline, LectureAttachementsInline, LectureReferenceInline]
+    inlines = [LecturePrivacyInline, LectureAttachementsInline, LectureReferenceInline, LectureExternalLinkInline]
 
     def save_model(self, request, new_lecture, form, change):
         # Update lecture duration
