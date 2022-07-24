@@ -24,7 +24,8 @@ QuizAttempt,
 Unit,
 Topic,
 LectureQuality,
-Note
+Note,
+CoursePrice
 )
 from .tasks import detect_and_convert_lecture_qualities, extract_and_set_lecture_audio
 
@@ -105,17 +106,42 @@ class CourseAttachementsInline(NestedStackedInline):
         qs = super(CourseAttachementsInline, self).get_queryset(request)
         return qs.select_related("course")
 
+class CoursePriceInline(NestedStackedInline):
+    model = CoursePrice
+    can_delete = True
+    extra = 1
+    verbose_name_plural = 'Prices'
+    fk_name = 'course'
+
+    def get_queryset(self, request):
+        qs = super(CoursePriceInline, self).get_queryset(request)
+        return qs.select_related("course")
 
 class CourseConfig(NestedModelAdmin):
     model = Course
 
-    list_filter = ('categories', 'date_created')
+    list_filter = ('categories', 'language', 'price', 'created_by', 'updated_by', 'date_created')
     ordering = ('-date_created',)
     list_display = ('title', 'date_created')
     readonly_fields = ('created_by', 'updated_by')
 
     fieldsets = (
-        ("Course Information", {'fields': ('image', 'title', 'description', 'price', 'categories', 'tags', 'featured', 'quiz', 'created_by', 'updated_by')}),
+        ("Course Information", {
+        'fields': (
+        'image',
+        'title',
+        'description',
+        'objectives',
+        'about',
+        'price',
+        'language',
+        'categories',
+        'tags',
+        'featured',
+        'quiz',
+        'created_by',
+        'updated_by'
+        )}),
     )
 
 
@@ -127,7 +153,7 @@ class CourseConfig(NestedModelAdmin):
             print(e)
             pass
 
-    inlines = [CoursePrivacyInline, CourseAttachementsInline, CourseUnitsInline]
+    inlines = [CoursePrivacyInline, CourseAttachementsInline, CourseUnitsInline, CoursePriceInline]
 
 
 main_admin.register(Course, CourseConfig)

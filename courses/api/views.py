@@ -4,6 +4,7 @@ from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
+from users.api.serializers import TeacherSerializer
 from .serializers import (
 CourseSerializer, CoursesSerializer, CourseIndexSerialiser,
 UnitSerializer, TopicsListSerializer,
@@ -32,7 +33,7 @@ class CourseList(ListAPIView):
 
     def get_queryset(self):
         request_params = self.request.GET
-        queryset = Course.objects.prefetch_related('tags', 'privacy__shared_with').select_related('privacy').all()
+        queryset = Course.objects.prefetch_related('tags', 'privacy__shared_with', 'units').select_related('privacy').all()
 
         if 'q' in request_params:
             search_query = request_params.get('q').split(" ")
@@ -557,6 +558,44 @@ class LectureReferenceList(APIView):
         if utils.allowed_to_access_lecture(request.user, lecture):
             references = lecture.references.all()
             serializer = ReferenceSerializer(references, many=True, context={'request': request})
+            return Response(serializer.data)
+
+        return Response(general_utils.error('access_denied'), status=status.HTTP_403_FORBIDDEN)
+
+
+class CourseReferenceList(APIView):
+
+    def get(self, request, course_id, format=None):
+
+        filter_kwargs = {
+        'id': course_id,
+        }
+        course, found, error = utils.get_object(model=Course, filter_kwargs=filter_kwargs)
+        if not found:
+            return Response(error, status=status.HTTP_404_NOT_FOUND)
+
+        if utils.allowed_to_access_course(request.user, course):
+            references = course.references
+            serializer = ReferenceSerializer(references, many=True, context={'request': request})
+            return Response(serializer.data)
+
+        return Response(general_utils.error('access_denied'), status=status.HTTP_403_FORBIDDEN)
+
+
+class CourseTeachersList(APIView):
+
+    def get(self, request, course_id, format=None):
+
+        filter_kwargs = {
+        'id': course_id,
+        }
+        course, found, error = utils.get_object(model=Course, filter_kwargs=filter_kwargs)
+        if not found:
+            return Response(error, status=status.HTTP_404_NOT_FOUND)
+
+        if utils.allowed_to_access_course(request.user, course):
+            teachers = course.get_contributed_teachers()
+            serializer = TeacherSerializer(teachers, many=True)
             return Response(serializer.data)
 
         return Response(general_utils.error('access_denied'), status=status.HTTP_403_FORBIDDEN)

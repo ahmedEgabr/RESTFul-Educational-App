@@ -1,4 +1,5 @@
 from django.db import models
+from ckeditor.fields import RichTextField
 from django.contrib.contenttypes.models import ContentType
 from main.models import UserActionModel, TimeStampedModel
 from courses.managers import CustomCourseManager
@@ -7,12 +8,21 @@ from courses.models.lecture import Lecture
 from courses.models.topic import Topic
 from courses.models.course_privacy import CoursePrivacy
 from courses.models.activity import CourseActivity
+from courses.models.reference import Reference
 from users.models import User, Teacher
 
 
 class Course(UserActionModel):
+
+    class Languages(models.TextChoices):
+        arabic = "arabic", ("Arabic")
+        english = "english", ("English")
+        mixed = "mixed", ("Mixed")
+
     title = models.CharField(max_length=100)
-    description = models.TextField()
+    description = RichTextField()
+    objectives = RichTextField(blank=True, null=True)
+    about = models.TextField(blank=True, null=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     categories = models.ManyToManyField("categories.Category", blank=True)
     date_created = models.DateTimeField(auto_now_add=True)
@@ -20,6 +30,7 @@ class Course(UserActionModel):
     featured = models.BooleanField(default=False)
     image = models.ImageField(upload_to="courses/images", blank=True)
     tags = models.ManyToManyField("categories.Tag", blank=True)
+    language = models.CharField(choices=Languages.choices, default=Languages.arabic, max_length=20)
 
     objects = CustomCourseManager()
 
@@ -70,6 +81,13 @@ class Course(UserActionModel):
         teachers_ids_list = self.get_lectures().values_list("teacher", flat=True)
         teachers_list = Teacher.objects.filter(user_id__in=teachers_ids_list)
         return teachers_list
+
+    @property
+    def references(self):
+        references_ids = self.get_lectures().filter(~models.Q(references=None)).values_list("references__id", flat=True)
+        if not references_ids:
+            return None
+        return Reference.objects.filter(id__in=list(references_ids))
 
     @property
     def comments(self):

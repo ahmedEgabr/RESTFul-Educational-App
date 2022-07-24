@@ -9,7 +9,8 @@ CourseFeedbacks, LectureComments,
 QuizDetail, CourseQuizAnswer, LectureQuizAnswer,
 CourseQuizResult, LectureQuizResult,
 CourseAttachement, LectureAttachement,
-CourseTreeLecturesList, LectureExternalLinksList, LectureReferenceList
+CourseTreeLecturesList, LectureExternalLinksList, LectureReferenceList, CourseReferenceList,
+CourseTeachersList
 )
 
 app_name = 'courses'
@@ -28,6 +29,8 @@ urlpatterns = [
   path('<int:course_id>/quiz/result', CourseQuizResult.as_view(), name='course_quiz_result'),
   path('<int:course_id>/quiz/answer', CourseQuizAnswer.as_view(), name='course_quiz_answer'),
   path('<int:course_id>/attachements', CourseAttachement.as_view(), name='course_attachment'),
+  path('<int:course_id>/references', CourseReferenceList.as_view(), name='course-references'),
+  path('<int:course_id>/teachers', CourseTeachersList.as_view(), name='course-teachers'),
 
   # Units API
   path('<int:course_id>/lectures/', CourseTreeLecturesList.as_view(), name='lectures'),
@@ -46,7 +49,7 @@ urlpatterns = [
   path('<int:course_id>/units/<int:unit_id>/topics/<int:topic_id>/lectures/<int:lecture_id>/quiz/answer', LectureQuizAnswer.as_view(), name='lecture_quiz_answer'),
   path('<int:course_id>/units/<int:unit_id>/topics/<int:topic_id>/lectures/<int:lecture_id>/attachements', LectureAttachement.as_view(), name='lecture_attachment'),
   path('<int:course_id>/units/<int:unit_id>/topics/<int:topic_id>/lectures/<int:lecture_id>/external_links', LectureExternalLinksList.as_view(), name='external_links'),
-  path('<int:course_id>/units/<int:unit_id>/topics/<int:topic_id>/lectures/<int:lecture_id>/references', LectureReferenceList.as_view(), name='references'),
+  path('<int:course_id>/units/<int:unit_id>/topics/<int:topic_id>/lectures/<int:lecture_id>/references', LectureReferenceList.as_view(), name='lecture-references'),
 
   # Lectures API
   path('<int:course_id>/lectures/', LecturesList.as_view(), name='lectures'), # DEPRECATED

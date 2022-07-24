@@ -18,3 +18,5 @@ from .report import Report
 from .reference import Reference
 from .note import Note
 from .lecture_external_link import LectureExternalLink
+from .abstract_price import Price
+from .course_price import CoursePrice
