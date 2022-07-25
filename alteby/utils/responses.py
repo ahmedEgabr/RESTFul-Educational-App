@@ -1,10 +1,3 @@
-import datetime
-from django.db.models import Subquery, IntegerField
-
-class SQCount(Subquery):
-    template = "(SELECT count(*) FROM (%(subquery)s) _count)"
-    output_field = IntegerField()
-
 
 def error(error_key):
     return {
@@ -19,14 +12,6 @@ def success(success_key):
         'message': 'success',
         'success_description': success_messages[success_key]
     }
-
-def seconds_to_duration(seconds):
-    if not seconds:
-        seconds = 0
-    duration = str(datetime.timedelta(seconds=seconds))
-    duration_slices = duration.split(':')
-    return f'{duration_slices[0]}h {duration_slices[1]}m {duration_slices[2]}s'
-
 
 error_messages = {
     'internal_error': 'Internal Server Error.',

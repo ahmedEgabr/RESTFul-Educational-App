@@ -3,7 +3,7 @@ from rest_framework.fields import CurrentUserDefault
 from courses.models import (
 Course, Unit, Topic,
 CourseActivity,
-Lecture, LectureQuality, CoursePrivacy,
+Lecture, LectureQuality, CoursePrivacy, CoursePrice,
 LecturePrivacy,
 Quiz, QuizResult, Question, Choice,
 Attachement, Comment, Feedback,
@@ -307,6 +307,13 @@ class UnitTopicsSerializer(serializers.ModelSerializer):
         model = Unit
         fields = ('id', 'title', 'course', 'order', 'topics', 'lectures_duration', 'lectures_count')
 
+
+class CoursePriceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CoursePrice
+        fields = '__all__'
+
+
 class CourseSerializer(serializers.ModelSerializer, QuerySerializerMixin):
     language = serializers.SerializerMethodField()
     progress = serializers.SerializerMethodField('get_progress')
@@ -322,6 +329,7 @@ class CourseSerializer(serializers.ModelSerializer, QuerySerializerMixin):
     categories = CategorySerializer(many=True, read_only=True)
     tags = TagSerializer(many=True, read_only=True)
 
+    price = serializers.SerializerMethodField()
     PREFETCH_FIELDS = ['categories__course_set', 'privacy__shared_with']
 
 
@@ -357,9 +365,22 @@ class CourseSerializer(serializers.ModelSerializer, QuerySerializerMixin):
     def get_language(self, course):
         return course.get_language_display()
 
+    def get_price(self, course):
+        request = self.context.get('request', None)
+        queryset = CoursePrice.objects
+        if request and request.country == "EG":
+            queryset = queryset.filter(currency="EGP")
+        else:
+            queryset = queryset.filter(currency="Dollar")
+
+        if not queryset:
+            return None
+
+        return CoursePriceSerializer(queryset, many=False).data
+
 
 class CoursesSerializer(serializers.ModelSerializer, QuerySerializerMixin):
-    langauge = serializers.SerializerMethodField()
+    language = serializers.SerializerMethodField()
     progress = serializers.SerializerMethodField('get_progress')
     is_enrolled = serializers.SerializerMethodField('get_enrollment')
     units_count = serializers.IntegerField(source='get_units_count')
@@ -373,6 +394,8 @@ class CoursesSerializer(serializers.ModelSerializer, QuerySerializerMixin):
     categories = CategorySerializer(many=True, read_only=True)
     tags = TagSerializer(many=True, read_only=True)
 
+    price = serializers.SerializerMethodField()
+
     PREFETCH_FIELDS = ['categories__course_set', 'privacy__shared_with']
 
 
@@ -407,6 +430,18 @@ class CoursesSerializer(serializers.ModelSerializer, QuerySerializerMixin):
 
     def get_language(self, course):
         return course.get_language_display()
+
+    def get_price(self, course):
+        request = self.context.get('request', None)
+        if request and request.country == "EG":
+            queryset = course.prices.filter(currency="egp")
+        else:
+            queryset = course.prices.filter(currency="dollar")
+
+        if not queryset:
+            return None
+
+        return CoursePriceSerializer(queryset.first(), many=False).data
 
 
 class CommentSerializer(serializers.ModelSerializer):

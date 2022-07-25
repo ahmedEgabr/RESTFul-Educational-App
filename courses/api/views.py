@@ -31,6 +31,29 @@ from .swagger_schema import course_detail_swagger_schema
 class CourseList(ListAPIView):
     serializer_class = CoursesSerializer
 
+    def get_ident(self, request):
+        from rest_framework.settings import api_settings
+
+        """
+        Identify the machine making the request by parsing HTTP_X_FORWARDED_FOR
+        if present and number of proxies is > 0. If not use all of
+        HTTP_X_FORWARDED_FOR if it is available, if not use REMOTE_ADDR.
+        """
+        xff = request.META.get('HTTP_X_FORWARDED_FOR')
+        print(xff)
+        remote_addr = request.META.get('REMOTE_ADDR')
+        print(remote_addr)
+        num_proxies = api_settings.NUM_PROXIES
+
+        if num_proxies is not None:
+            if num_proxies == 0 or xff is None:
+                return remote_addr
+            addrs = xff.split(',')
+            client_addr = addrs[-min(num_proxies, len(addrs))]
+            return client_addr.strip()
+
+        return ''.join(xff.split()) if xff else remote_addr
+
     def get_queryset(self):
         request_params = self.request.GET
         queryset = Course.objects.prefetch_related('tags', 'privacy__shared_with', 'units').select_related('privacy').all()
