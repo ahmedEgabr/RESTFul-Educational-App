@@ -110,6 +110,7 @@ class CoursePriceInline(NestedStackedInline):
     model = CoursePrice
     can_delete = True
     extra = 1
+    max_num = len(CoursePrice.PriceCurrency.choices)
     verbose_name_plural = 'Prices'
     fk_name = 'course'
 
