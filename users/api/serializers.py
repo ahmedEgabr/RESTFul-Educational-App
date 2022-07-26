@@ -61,7 +61,7 @@ class AuthTokenSerializer(serializers.Serializer):
                 try:
                     user_request = User.objects.get(username=email_or_username, is_student=True)
                 except User.DoesNotExist:
-                    msg = 'Unable to log in with provided credentials.'
+                    msg = 'Incorrect Email/Username or Password.'
                     raise serializers.ValidationError({
                         'status': 'error',
                         'message': msg
@@ -87,7 +87,7 @@ class AuthTokenSerializer(serializers.Serializer):
                     })
 
             else:
-                msg = 'Unable to log in with provided credentials.'
+                msg = 'Incorrect Email/Username or Password.'
                 raise serializers.ValidationError({
                     'status': 'error',
                     'message': msg
