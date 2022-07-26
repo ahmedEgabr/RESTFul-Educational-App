@@ -1,4 +1,5 @@
 from django.contrib.admin import AdminSite
+from django.contrib.admin.apps import AdminConfig
 from .constants import TEACHER_GROUP, STUDENT_GROUP
 from django.db.models import Q
 
@@ -19,6 +20,9 @@ class MainAdmin(AdminSite):
 
         return True
 
+
+class MainAdminConfig(AdminConfig):
+    default_site = 'alteby.admin_sites.MainAdmin'
 
 main_admin = MainAdmin(name="admin")
 

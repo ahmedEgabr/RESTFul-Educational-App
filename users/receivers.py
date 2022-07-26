@@ -1,6 +1,6 @@
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
-from .models import Student, Teacher, LoggedInUser
+from .models import User, Student, Teacher, LoggedInUser
 from rest_framework.authtoken.models import Token
 from django.conf import settings
 from django.urls import reverse
@@ -11,13 +11,15 @@ from django.contrib.auth import user_logged_in, user_logged_out
 
 UserModel = settings.AUTH_USER_MODEL
 
-@receiver(post_save, sender=UserModel)
-def create_auth_token(sender, instance=None, created=False, **kwargs):
-    if created:
-        Token.objects.create(user=instance)
+@receiver(pre_save, sender=UserModel)
+def pre_save_user(sender, instance=None, created=False, **kwargs):
 
-@receiver(post_save, sender=UserModel)
-def create_user_profile(sender, instance=None, created=False, **kwargs):
+    if instance.id:
+        old_instance = User.objects.get(id=instance.id)
+        if old_instance.is_teacher != instance.is_teacher and not instance.is_teacher:
+            instance.delete_teacher_profile()
+        if old_instance.is_student != instance.is_student and not instance.is_student:
+            instance.delete_student_profile()
 
     if instance.is_student and not hasattr(instance, 'student_profile'):
         instance.create_student_profile()

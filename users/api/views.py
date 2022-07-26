@@ -29,7 +29,7 @@ from rest_framework.pagination import PageNumberPagination
 from django.contrib.auth import login
 from django.db.models import Prefetch, Count, Sum, OuterRef, Exists, Subquery, IntegerField, Q, FloatField
 from django.db.models.functions import Coalesce
-
+from alteby.utils import success as success_response
 from payment.models import CourseEnrollment
 
 class SignIn(APIView):
@@ -215,12 +215,24 @@ class EnrolledCourses(APIView, PageNumberPagination):
         serializer = CourseSerializer(courses, many=True, context={'request':request})
         return self.get_paginated_response(serializer.data)
 
+class DeactivateUserView(APIView):
+
+    def get(self, request, user_id):
+        request.user.deactivate()
+        if request.user.is_teacher:
+            request.user.get_teacher_profile().deactivate()
+
+        if request.user.is_student:
+            request.user.get_student_profile().deactivate()
+        return Response(success_response("account_deactivated"), status=status.HTTP_200_OK)
+
 class AnonymousToken(APIView):
 
     authentication_classes = ()
     permission_classes = ()
 
     def get(self, request):
+
         anonymous_user = User.get_or_create_anonymous_user()
         token, created = Token.objects.get_or_create(user=anonymous_user)
         response = {

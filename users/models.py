@@ -64,21 +64,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     def save(self, created=None, *args, **kwargs):
         super().save(*args, **kwargs)
 
-    @classmethod
-    def get_or_create_anonymous_user(cls):
-
-        email = "anonymous@anonymous.cc"
-        first_name = "anonymous"
-        last_name = "anonymous"
-        username = "anonymous"
-
-        anonymous_user, created = cls.objects.get_or_create(
-        email=email,
-        first_name=first_name,
-        last_name=last_name,
-        username=username
-        )
-        return anonymous_user
+    def deactivate(self):
+        self.is_active = False
+        self.save()
 
     def create_student_profile(self):
         if self.is_student and not hasattr(self, "student_profile"):
@@ -87,6 +75,14 @@ class User(AbstractBaseUser, PermissionsMixin):
             transaction.on_commit(lambda: self.groups.add(student_group))
             return student_profile
         return None
+
+    def delete_student_profile(self):
+        if hasattr(self, "student_profile"):
+            self.student_profile.delete()
+            student_group, created = Group.objects.get_or_create(name=STUDENT_GROUP)
+            transaction.on_commit(lambda: self.groups.remove(student_group))
+            return True
+        return False
 
     def get_student_profile(self):
         if not self.is_student:
@@ -105,6 +101,14 @@ class User(AbstractBaseUser, PermissionsMixin):
             return teacher_profile
         return None
 
+    def delete_teacher_profile(self):
+        if hasattr(self, "teacher_profile"):
+            self.teacher_profile.delete()
+            teacher_group, created = Group.objects.get_or_create(name=TEACHER_GROUP)
+            transaction.on_commit(lambda: self.groups.remove(teacher_group))
+            return True
+        return False
+
     def get_teacher_profile(self):
         if not self.is_teacher:
             return None
@@ -113,6 +117,22 @@ class User(AbstractBaseUser, PermissionsMixin):
         if not self.teacher_profile.is_active:
             return None
         return self.teacher_profile
+
+    @classmethod
+    def get_or_create_anonymous_user(cls):
+
+        email = "anonymous@anonymous.cc"
+        first_name = "anonymous"
+        last_name = "anonymous"
+        username = "anonymous"
+
+        anonymous_user, created = cls.objects.get_or_create(
+        email=email,
+        first_name=first_name,
+        last_name=last_name,
+        username=username
+        )
+        return anonymous_user
 
 
 class Student(models.Model):
@@ -150,6 +170,10 @@ class Student(models.Model):
     def is_enrolled(self, course):
         return course.id in self.user.enrollments.values_list('course', flat=True)
 
+    def deactivate(self):
+        self.is_active = False
+        self.save()
+
 class Teacher(models.Model):
     user = models.OneToOneField(
     settings.AUTH_USER_MODEL,
@@ -162,6 +186,10 @@ class Teacher(models.Model):
 
     def __str__(self):
         return self.user.email
+
+    def deactivate(self):
+        self.is_active = False
+        self.save()
 
 
 # Model to store the list of logged in users

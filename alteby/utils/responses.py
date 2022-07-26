@@ -26,5 +26,6 @@ error_messages = {
 
 success_messages = {
     'quiz_answer_submitted': "Quiz answers has been recorded.",
-    'enrolled': "Course Successfully Enrolled!"
+    'enrolled': "Course Successfully Enrolled!",
+    'account_deactivated': "Account Deactivated Successfully"
 }

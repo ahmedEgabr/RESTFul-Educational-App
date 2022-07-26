@@ -55,45 +55,45 @@ class AuthTokenSerializer(serializers.Serializer):
         email_or_username = attrs.get('email_or_username')
         password = attrs.get('password')
 
-        if email_or_username and password:
-            # Check if user sent email
-            if not validateEmail(email_or_username):
-                try:
-                    user_request = User.objects.get(username=email_or_username, is_student=True)
-                except User.DoesNotExist:
-                    msg = 'Incorrect Email/Username or Password.'
-                    raise serializers.ValidationError({
-                        'status': 'error',
-                        'message': msg
-                    })
+        if not (email_or_username or password):
+            msg = 'Must include "email or username" and "password"'
+            raise serializers.ValidationError({
+                'status': 'error',
+                'message': msg
+            })
 
-                email_or_username = user_request.email
-
-            user = authenticate(email=email_or_username, password=password)
-
-            if user:
-                if not user.is_active:
-                    msg = 'User account is disabled.'
-                    raise serializers.ValidationError({
-                        'status': 'error',
-                        'message': msg
-                    })
-
-                if not user.get_student_profile():
-                    msg = 'You are not a student to login.'
-                    raise serializers.ValidationError({
-                        'status': 'error',
-                        'message': msg
-                    })
-
-            else:
+        # Check if user sent email
+        if not validateEmail(email_or_username):
+            try:
+                user_request = User.objects.get(username=email_or_username, is_student=True)
+            except User.DoesNotExist:
                 msg = 'Incorrect Email/Username or Password.'
                 raise serializers.ValidationError({
                     'status': 'error',
                     'message': msg
                 })
-        else:
-            msg = 'Must include "email or username" and "password"'
+
+            email_or_username = user_request.email
+
+        user = authenticate(email=email_or_username, password=password)
+
+        if not user:
+            msg = 'Incorrect Email/Username or Password.'
+            raise serializers.ValidationError({
+                'status': 'error',
+                'message': msg
+            })
+
+        if not user.is_active:
+            msg = 'User account is disabled.'
+            raise serializers.ValidationError({
+                'status': 'error',
+                'message': msg
+            })
+
+        user_profile = user.get_student_profile()
+        if not user_profile:
+            msg = 'You are not a student to login.'
             raise serializers.ValidationError({
                 'status': 'error',
                 'message': msg
