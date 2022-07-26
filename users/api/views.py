@@ -219,12 +219,16 @@ class DeactivateUserView(APIView):
 
     def get(self, request, user_id):
         request.user.deactivate()
-        if request.user.is_teacher:
-            request.user.get_teacher_profile().deactivate()
-
-        if request.user.is_student:
-            request.user.get_student_profile().deactivate()
         return Response(success_response("account_deactivated"), status=status.HTTP_200_OK)
+
+class UserScreenShotRecordView(APIView):
+    def get(self, request, user_id):
+        user = request.user
+        user.record_a_screenshot()
+        response = {
+        "is_blocked": user.is_reached_screenshots_limit
+        }
+        return Response(response, status=status.HTTP_200_OK)
 
 class AnonymousToken(APIView):
 

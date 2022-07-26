@@ -21,14 +21,21 @@ class IPUtils:
     """ IP Utils class """
 
     def __init__(self, ip):
-        self.ip = geocoder.ip(ip)
+        try:
+            self.ip = geocoder.ip(ip)
+        except Exception as e:
+            self.ip = None
 
     @property
     def country(self):
+        if not self.ip:
+            return None
         return self.ip.country
 
     @property
     def city(self):
+        if not self.ip:
+            return None
         return self.ip.city
     #
     # @classmethod

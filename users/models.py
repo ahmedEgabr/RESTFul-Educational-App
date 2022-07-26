@@ -1,4 +1,5 @@
 from django.db import models, transaction
+from django.core.validators import MinValueValidator
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, BaseUserManager, PermissionsMixin
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.conf import settings
@@ -6,6 +7,7 @@ from django.db.models import F
 from django.db import transaction
 from django.contrib.auth.models import Group
 from alteby.constants import TEACHER_GROUP, STUDENT_GROUP
+from main.models import AppConfiguration
 
 # this class is for overriding default users manager of django user model
 class MyAccountManager(BaseUserManager):
@@ -54,19 +56,46 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField('Staff status', default=False)
     is_teacher = models.BooleanField('Teacher status', default=False)
     is_student = models.BooleanField('Student status', default=False)
+    screenshots_taken = models.IntegerField(
+    blank=True, null=True, default=0, validators=[MinValueValidator(0)], verbose_name="Screenshots Taken"
+    )
 
     objects = MyAccountManager()
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
 
-    # resize profile image before saving
     def save(self, created=None, *args, **kwargs):
         super().save(*args, **kwargs)
 
     def deactivate(self):
+        # Deactivate the User
         self.is_active = False
         self.save()
+
+        # Deactivate User's Profile
+        if self.is_teacher:
+            teacher_profile = self.get_teacher_profile()
+            if teacher_profile:
+                teacher_profile.deactivate()
+        if self.is_student:
+            student_profile = self.get_student_profile()
+            if student_profile:
+                student_profile.deactivate()
+        return True
+
+    def record_a_screenshot(self):
+        self.screenshots_taken += 1
+        self.save()
+        return self.screenshots_taken
+
+    @property
+    def is_reached_screenshots_limit(self):
+        is_limit_reached = AppConfiguration.is_reached_screenshots_limit(self.screenshots_taken)
+        if is_limit_reached:
+            return True
+        return False
+
 
     def create_student_profile(self):
         if self.is_student and not hasattr(self, "student_profile"):

@@ -27,6 +27,11 @@ def pre_save_user(sender, instance=None, created=False, **kwargs):
         instance.create_teacher_profile()
 
 
+@receiver(post_save, sender=UserModel)
+def post_save_user(sender, instance=None, created=False, **kwargs):
+    if instance.is_active and instance.is_reached_screenshots_limit:
+        instance.deactivate()
+
 @receiver(user_logged_in)
 def on_user_logged_in(sender, request, **kwargs):
     LoggedInUser.objects.get_or_create(user=kwargs.get('user'))
@@ -35,8 +40,6 @@ def on_user_logged_in(sender, request, **kwargs):
 @receiver(user_logged_out)
 def on_user_logged_out(sender, **kwargs):
     LoggedInUser.objects.filter(user=kwargs.get('user')).delete()
-
-
 
 @receiver(reset_password_token_created)
 def password_reset_token_created(sender, instance, reset_password_token, *args, **kwargs):

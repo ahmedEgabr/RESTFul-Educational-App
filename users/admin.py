@@ -16,9 +16,10 @@ class UserConfig(UserAdmin):
     ordering = ('-date_joined',)
     list_display = ('email', 'username',
                     'is_active', 'is_staff')
+    readonly_fields = ["date_joined"]
 
     fieldsets = (
-        ("User Information", {'fields': ('email', 'username', 'password')}),
+        ("User Information", {'fields': ('email', 'username', 'password', 'screenshots_taken')}),
         ('Permissions', {'fields': ('is_staff', 'is_active', 'is_student', 'is_teacher', 'is_superuser', 'groups', 'user_permissions')}),
     )
 
