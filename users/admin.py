@@ -7,11 +7,13 @@ from django.contrib.auth.forms import (
 )
 from django.contrib.auth.admin import GroupAdmin
 from django.contrib.auth.models import Group
+from django.contrib import messages
+
 
 class UserConfig(UserAdmin):
     model = User
     change_password_form = AdminPasswordChangeForm
-
+    actions = ["activate_selected_users", "deactivate_selected_users"]
     list_filter = ('email', 'username', 'is_active', 'is_staff')
     ordering = ('-date_joined',)
     list_display = ('email', 'username',
@@ -22,6 +24,29 @@ class UserConfig(UserAdmin):
         ("User Information", {'fields': ('email', 'username', 'password', 'screenshots_taken')}),
         ('Permissions', {'fields': ('is_staff', 'is_active', 'is_student', 'is_teacher', 'is_superuser', 'groups', 'user_permissions')}),
     )
+
+    def activate_selected_users(self, request, queryset):
+        queryset = queryset.prefetch_related("teacher_profile", "student_profile")
+        for user in queryset:
+            if user.activate():
+                message = "User: {0} successfully activated.".format(user.username)
+                self.message_user(request, message, level=messages.SUCCESS)
+            else:
+                message = "Cannot activate user: {0}.".format(user.username)
+                self.message_user(request, message, level=messages.ERROR)
+        return
+
+    def deactivate_selected_users(self, request, queryset):
+        queryset = queryset.prefetch_related("teacher_profile", "student_profile")
+        for user in queryset:
+            if user.deactivate():
+                message = "User: {0} successfully deactivated.".format(user.username)
+                self.message_user(request, message, level=messages.SUCCESS)
+            else:
+                message = "Cannot deactivate user: {0}.".format(user.username)
+                self.message_user(request, message, level=messages.ERROR)
+        return
+
 
 class StudentConfig(admin.ModelAdmin):
     model = Student

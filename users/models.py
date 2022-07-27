@@ -8,41 +8,8 @@ from django.db import transaction
 from django.contrib.auth.models import Group
 from alteby.constants import TEACHER_GROUP, STUDENT_GROUP
 from main.models import AppConfiguration
+from users.managers import UserManager
 
-# this class is for overriding default users manager of django user model
-class MyAccountManager(BaseUserManager):
-
-    def create_user(self, email, username, password=None, is_staff=False, is_superuser=False, is_teacher=False, is_student=True):
-        if not email:
-            raise ValueError('User must have an email address')
-        if not username:
-            raise VlaueError('User must have a username')
-
-        user = self.model(
-                        email=self.normalize_email(email),
-                        username=username,
-                        is_staff=is_staff,
-                        is_superuser=is_superuser,
-                        is_teacher=is_teacher,
-                        is_student=is_student
-        )
-
-        user.set_password(password)
-        user.save(using=self._db)
-        return user
-
-    @transaction.atomic
-    def create_superuser(self, email, username, password):
-        user = self.create_user(
-            email=self.normalize_email(email),
-            password=password,
-            username=username,
-            is_staff = True,
-            is_superuser = True,
-            is_teacher = True
-        )
-        user.save(using = self._db)
-        return user
 
 # Account Model
 class User(AbstractBaseUser, PermissionsMixin):
@@ -60,13 +27,30 @@ class User(AbstractBaseUser, PermissionsMixin):
     blank=True, null=True, default=0, validators=[MinValueValidator(0)], verbose_name="Screenshots Taken"
     )
 
-    objects = MyAccountManager()
+    objects = UserManager()
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
 
     def save(self, created=None, *args, **kwargs):
         super().save(*args, **kwargs)
+
+    def activate(self):
+        # Activate the User
+        if not self.is_active:
+            self.is_active = True
+            self.save()
+
+        # Deactivate User's Profile
+        if self.is_teacher:
+            teacher_profile = self.get_teacher_profile()
+            if teacher_profile:
+                teacher_profile.activate()
+        if self.is_student:
+            student_profile = self.get_student_profile()
+            if student_profile:
+                student_profile.activate()
+        return True
 
     def deactivate(self):
         # Deactivate the User
@@ -199,6 +183,11 @@ class Student(models.Model):
     def is_enrolled(self, course):
         return course.id in self.user.enrollments.values_list('course', flat=True)
 
+    def activate(self):
+        if not self.is_active:
+            self.is_active = False
+            self.save()
+
     def deactivate(self):
         self.is_active = False
         self.save()
@@ -215,6 +204,11 @@ class Teacher(models.Model):
 
     def __str__(self):
         return self.user.email
+
+    def activate(self):
+        if not self.is_active:
+            self.is_active = False
+            self.save()
 
     def deactivate(self):
         self.is_active = False
