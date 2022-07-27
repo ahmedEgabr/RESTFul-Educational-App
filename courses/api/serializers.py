@@ -6,7 +6,7 @@ CourseActivity,
 Lecture, LectureQuality, CoursePrivacy, CoursePrice,
 LecturePrivacy,
 Quiz, QuizResult, Question, Choice,
-Attachement, Comment, Feedback,
+Attachement, Comment, Reply, Feedback,
 LectureExternalLink, Reference
 )
 from alteby.utils import seconds_to_duration
@@ -14,7 +14,7 @@ from categories.api.serializers import CategorySerializer, TagSerializer
 from django.db.models import Sum
 from payment.models import CourseEnrollment
 from courses.utils import allowed_to_access_lecture
-from users.api.serializers import TeacherSerializer
+from users.api.serializers import TeacherSerializer, BasicUserSerializer
 
 
 class LectureIndexSerialiser(serializers.ModelSerializer):
@@ -444,7 +444,21 @@ class CoursesSerializer(serializers.ModelSerializer, QuerySerializerMixin):
         return CoursePriceSerializer(queryset.first(), many=False).data
 
 
+class ReplySerializer(serializers.ModelSerializer):
+    teacher = serializers.SerializerMethodField()
+    class Meta:
+        model = Reply
+        fields = ("id", "body", "teacher", "created_at")
+
+    def get_teacher(self, reply):
+        return BasicUserSerializer(reply.created_by, many=False).data
+
 class CommentSerializer(serializers.ModelSerializer):
+    student = serializers.SerializerMethodField()
+    replies = ReplySerializer(many=True, read_only=True)
     class Meta:
         model = Comment
-        fields = '__all__'
+        fields = ("id", "body", "student", "created_at", "replies")
+
+    def get_student(self, comment):
+        return BasicUserSerializer(comment.user, many=False).data

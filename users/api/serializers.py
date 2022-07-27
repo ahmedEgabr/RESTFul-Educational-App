@@ -119,6 +119,11 @@ class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True)
     new_password = serializers.CharField(required=True)
 
+class BasicUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('id', 'email', "username")
+
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User

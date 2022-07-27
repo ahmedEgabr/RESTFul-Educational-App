@@ -3,10 +3,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from model_utils import Choices
 from main.models import TimeStampedModel
+from courses.managers import CommentManager
 
-class PublishedCommentsManager(models.Manager):
-    def get_queryset(self):
-        return super().get_queryset().filter(status='published')
 
 class Comment(TimeStampedModel):
 
@@ -23,12 +21,16 @@ class Comment(TimeStampedModel):
     object_id = models.PositiveIntegerField()
     object = GenericForeignKey('object_type', 'object_id')
 
-    comment_body = models.TextField()
+    body = models.TextField()
     status = models.CharField(max_length=100, choices=STATUS_CHOICES, default=STATUS_CHOICES.pending)
 
     # Default manager
-    objects = models.Manager()
+    objects = CommentManager()
 
+    class Meta:
+        indexes = [
+            models.Index(fields=["object_type", "object_id"]),
+        ]
 
     def __str__(self):
-        return f'{self.user.email}-{self.comment_body}'
+        return f'{self.user.email}-{self.body}'

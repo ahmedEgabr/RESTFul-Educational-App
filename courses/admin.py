@@ -12,6 +12,7 @@ Lecture, LecturePrivacy,
 CourseActivity,
 Reference,
 Comment,
+Reply,
 Feedback,
 CorrectInfo,
 Report,
@@ -29,7 +30,16 @@ CoursePrice
 )
 from .tasks import detect_and_convert_lecture_qualities, extract_and_set_lecture_audio
 
+main_admin.register(QuizResult)
+main_admin.register(QuizAttempt)
+main_admin.register(Unit)
+main_admin.register(Topic)
+main_admin.register(Reference)
+main_admin.register(CorrectInfo)
+main_admin.register(Report)
 
+
+@admin.register(Note, site=main_admin)
 class NoteConfig(admin.ModelAdmin):
     model = Note
     list_filter = ('user', 'lecture')
@@ -39,13 +49,8 @@ class NoteConfig(admin.ModelAdmin):
         (None, {'fields': ('user', 'lecture', 'note')}),
     )
 
-main_admin.register(Note, NoteConfig)
-main_admin.register(QuizResult)
-main_admin.register(QuizAttempt)
-main_admin.register(Unit)
-main_admin.register(Topic)
-main_admin.register(Reference)
 
+@admin.register(LectureQuality, site=main_admin)
 class LectureQualityConfig(admin.ModelAdmin):
     model = LectureQuality
 
@@ -56,7 +61,6 @@ class LectureQualityConfig(admin.ModelAdmin):
         (None, {'fields': ('lecture', 'video', 'quality')}),
     )
 
-main_admin.register(LectureQuality, LectureQualityConfig)
 
 class UnitTopicsInline(NestedStackedInline):
     model = Topic
@@ -106,6 +110,7 @@ class CourseAttachementsInline(NestedStackedInline):
         qs = super(CourseAttachementsInline, self).get_queryset(request)
         return qs.select_related("course")
 
+
 class CoursePriceInline(NestedStackedInline):
     model = CoursePrice
     can_delete = True
@@ -118,6 +123,8 @@ class CoursePriceInline(NestedStackedInline):
         qs = super(CoursePriceInline, self).get_queryset(request)
         return qs.select_related("course")
 
+
+@admin.register(Course, site=main_admin)
 class CourseConfig(NestedModelAdmin):
     model = Course
 
@@ -157,9 +164,7 @@ class CourseConfig(NestedModelAdmin):
     inlines = [CoursePrivacyInline, CourseAttachementsInline, CourseUnitsInline, CoursePriceInline]
 
 
-main_admin.register(Course, CourseConfig)
-
-class LectureAttachementsInline(NestedStackedInline):
+class LectureAttachementsInline(admin.StackedInline):
     model = LectureAttachement
     exclude = ['created_by', 'updated_by']
     can_delete = True
@@ -171,7 +176,7 @@ class LectureAttachementsInline(NestedStackedInline):
         qs = super(LectureAttachementsInline, self).get_queryset(request)
         return qs.select_related("lecture")
 
-class LecturePrivacyInline(NestedStackedInline):
+class LecturePrivacyInline(admin.StackedInline):
     model = LecturePrivacy
     exclude = ['created_by', 'updated_by']
     can_delete = False
@@ -183,7 +188,7 @@ class LecturePrivacyInline(NestedStackedInline):
         return qs.select_related("lecture")
 
 
-class LectureExternalLinkInline(NestedStackedInline):
+class LectureExternalLinkInline(admin.StackedInline):
     model = LectureExternalLink
     exclude = ['created_by', 'updated_by']
     can_delete = True
@@ -196,7 +201,8 @@ class LectureExternalLinkInline(NestedStackedInline):
         return qs.select_related("lecture")
 
 
-class LectureConfig(NestedModelAdmin):
+@admin.register(Lecture, site=main_admin)
+class LectureConfig(admin.ModelAdmin):
     model = Lecture
     form = LectureForm
     list_filter = ('topic', 'date_created')
@@ -236,8 +242,8 @@ class LectureConfig(NestedModelAdmin):
 
         return new_lecture
 
-main_admin.register(Lecture, LectureConfig)
 
+@admin.register(CourseActivity, site=main_admin)
 class CourseActivityConfig(admin.ModelAdmin):
     model = CourseActivity
     list_filter = ('user', 'course', 'lecture', 'is_finished')
@@ -248,20 +254,32 @@ class CourseActivityConfig(admin.ModelAdmin):
         (None, {'fields': ('user', 'course', 'lecture', 'left_off_at', 'is_finished')}),
     )
 
-main_admin.register(CourseActivity, CourseActivityConfig)
 
-class CommentConfig(NestedModelAdmin):
+class ReplyInline(admin.StackedInline):
+    model = Reply
+    exclude = ['updated_by']
+    readonly_fields = ["created_by"]
+    can_delete = True
+    extra = 1
+    verbose_name_plural = 'Replies'
+    fk_name = 'comment'
+
+
+@admin.register(Comment, site=main_admin)
+class CommentConfig(admin.ModelAdmin):
     model = Comment
 
     list_filter = ('user', 'object_type', 'created_at', 'status')
     list_display = ('user', 'object_type', 'created_at', 'status')
 
     fieldsets = (
-        ("Comment Information", {'fields': ('user', 'object_type', 'object_id', 'comment_body', 'status')}),
+        ("Comment Information", {'fields': ('user', 'object_type', 'object_id', 'body', 'status')}),
     )
 
-main_admin.register(Comment, CommentConfig)
+    inlines = (ReplyInline,)
 
+
+@admin.register(Feedback, site=main_admin)
 class FeedbackConfig(NestedModelAdmin):
     model = Feedback
 
@@ -273,11 +291,6 @@ class FeedbackConfig(NestedModelAdmin):
     fieldsets = (
         ("Feedback Information", {'fields': ('user', 'course', 'rating', 'description')}),
     )
-
-main_admin.register(Feedback, FeedbackConfig)
-main_admin.register(CorrectInfo)
-main_admin.register(Report)
-
 
 
 class ChoiceInline(NestedStackedInline):
@@ -296,8 +309,7 @@ class QuestionInline(NestedStackedInline):
     inlines = [ChoiceInline]
 
 
+@admin.register(Quiz, site=main_admin)
 class QuizConfig(NestedModelAdmin):
     model = Quiz
     inlines = [QuestionInline]
-
-main_admin.register(Quiz, QuizConfig)

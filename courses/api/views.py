@@ -623,15 +623,19 @@ class CourseComments(APIView):
             return Response(error, status=status.HTTP_404_NOT_FOUND)
 
         if utils.allowed_to_access_course(request.user, course):
-            comment_body = request.data['comment_body']
-            comment = Comment.objects.create(user=request.user, course=course, comment_body=comment_body)
+            comment_body = request.data['body']
+            comment = Comment.objects.create(
+            user=request.user,
+            object=course,
+            body=comment_body
+            )
             serializer = CommentSerializer(comment, many=False, context={'request': request})
             return Response(serializer.data)
 
         return Response(general_utils.error('access_denied'), status=status.HTTP_403_FORBIDDEN)
 
 
-class LectureComments(APIView):
+class LectureComments(APIView, PageNumberPagination):
     def get(self, request, course_id, unit_id, topic_id, lecture_id, format=None):
 
         filter_kwargs = {
@@ -646,8 +650,9 @@ class LectureComments(APIView):
 
         if utils.allowed_to_access_lecture(request.user, lecture):
             comments = lecture.comments
+            comments = self.paginate_queryset(comments, request, view=self)
             serializer = CommentSerializer(comments, many=True, context={'request': request})
-            return Response(serializer.data)
+            return self.get_paginated_response(serializer.data)
 
         return Response(general_utils.error('access_denied'), status=status.HTTP_403_FORBIDDEN)
 
@@ -663,8 +668,14 @@ class LectureComments(APIView):
             return Response(error, status=status.HTTP_404_NOT_FOUND)
 
         if utils.allowed_to_access_lecture(request.user, lecture):
-            comment_body = request.data['comment_body']
-            comment = Comment.objects.create(user=request.user, course=lecture.topic.unit.course, lecture=lecture, comment_body=comment_body)
+            comment_body = request.data['body']
+            comment = Comment.objects.create(
+            user=request.user,
+            object=lecture,
+            body=comment_body
+            )
+            print(comment)
+            print(comment.id)
             serializer = CommentSerializer(comment, many=False, context={'request': request})
             return Response(serializer.data)
 
