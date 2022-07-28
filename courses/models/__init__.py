@@ -11,7 +11,7 @@ from .course_attachement import CourseAttachement
 from .lecture_attachement import LectureAttachement
 from .activity import CourseActivity
 from .quiz_models import Quiz, Question, Choice, QuizResult, QuizAttempt
-from .comment import Comment
+from .discussion import Discussion
 from .feedback import Feedback
 from .correct_info import CorrectInfo
 from .report import Report

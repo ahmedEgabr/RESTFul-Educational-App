@@ -6,7 +6,7 @@ CourseActivity,
 Lecture, LectureQuality, CoursePrivacy, CoursePrice,
 LecturePrivacy,
 Quiz, QuizResult, Question, Choice,
-Attachement, Comment, Reply, Feedback,
+Attachement, Discussion, Reply, Feedback,
 LectureExternalLink, Reference
 )
 from alteby.utils import seconds_to_duration
@@ -453,12 +453,12 @@ class ReplySerializer(serializers.ModelSerializer):
     def get_teacher(self, reply):
         return BasicUserSerializer(reply.created_by, many=False).data
 
-class CommentSerializer(serializers.ModelSerializer):
+class DiscussionSerializer(serializers.ModelSerializer):
     student = serializers.SerializerMethodField()
     replies = ReplySerializer(many=True, read_only=True)
     class Meta:
-        model = Comment
+        model = Discussion
         fields = ("id", "body", "student", "created_at", "replies")
 
-    def get_student(self, comment):
-        return BasicUserSerializer(comment.user, many=False).data
+    def get_student(self, discussion):
+        return BasicUserSerializer(discussion.user, many=False).data

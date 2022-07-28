@@ -4,13 +4,14 @@ from django.db import transaction
 from alteby.admin_sites import teacher_admin
 from courses.admin import (
 UnitTopicsInline, CourseUnitsInline, CoursePrivacyInline, CourseAttachementsInline, CoursePriceInline,
-LectureAttachementsInline, LecturePrivacyInline, LectureExternalLinkInline
+LectureAttachementsInline, LecturePrivacyInline, LectureExternalLinkInline, ReplyInline
 )
-from courses.models import Course, Lecture
+from courses.models import Course, Lecture, Discussion
 from .admin_forms import LectureForm, CourseEnrollmentForm
 from payment.models import CourseEnrollment
 from .admin_forms import LectureForm
 from courses.tasks import detect_and_convert_lecture_qualities, extract_and_set_lecture_audio
+
 
 @admin.register(Course, site=teacher_admin)
 class CourseConfig(NestedModelAdmin):
@@ -123,3 +124,30 @@ class CourseEnrollmentConfig(admin.ModelAdmin):
         if request.user.is_superuser:
             return qs
         return qs.filter(created_by=request.user)
+
+
+from django.contrib.contenttypes.models import ContentType
+
+
+@admin.register(Discussion, site=teacher_admin)
+class DiscussionConfig(admin.ModelAdmin):
+    model = Discussion
+
+    list_filter = ('user', 'object_type', 'created_at', 'status')
+    list_display = ('user', 'object_type', 'created_at', 'status')
+    readonly_fields = ("user", "body")
+    fieldsets = (
+        ("Discussion Information", {'fields': ('user', 'body', 'status')}),
+    )
+
+    def get_queryset(self, request):
+        lectures = request.user.lectures
+        lectures_ids = []
+        if lectures:
+            lectures_ids = lectures.values_list("id", flat=True)
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(object_id__in=lectures_ids)
+
+    inlines = (ReplyInline,)

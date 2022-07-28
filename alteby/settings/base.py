@@ -84,7 +84,7 @@ INSTALLED_APPS = [
 #     # Reorder Courses models
 #     {'app': 'courses', 'models': ('courses.Course', 'courses.Lecture', 'courses.CourseActivity', 'courses.Quiz', 'courses.QuizResult', 'courses.QuizAttempt')},
 #
-#     {'app': 'courses', 'label': 'Reports and Feedbacks' ,'models': ('courses.Report', 'courses.Feedback', 'courses.CorrectInfo', 'courses.Comment')},
+#     {'app': 'courses', 'label': 'Reports and Feedbacks' ,'models': ('courses.Report', 'courses.Feedback', 'courses.CorrectInfo', 'courses.Discussion')},
 #
 #     'payment'
 # )

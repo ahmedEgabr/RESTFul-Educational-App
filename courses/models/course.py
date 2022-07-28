@@ -3,7 +3,7 @@ from ckeditor.fields import RichTextField
 from django.contrib.contenttypes.models import ContentType
 from main.models import UserActionModel, TimeStampedModel
 from courses.managers import CustomCourseManager
-from courses.models.comment import Comment
+from courses.models.discussion import Discussion
 from courses.models.lecture import Lecture
 from courses.models.topic import Topic
 from courses.models.course_privacy import CoursePrivacy
@@ -90,5 +90,5 @@ class Course(UserActionModel):
         return Reference.objects.filter(id__in=list(references_ids))
 
     @property
-    def comments(self):
-        return Comment.objects.filter(object_type=ContentType.objects.get_for_model(self).id, status='published')
+    def discussions(self):
+        return Discussion.objects.filter(object_type=ContentType.objects.get_for_model(self).id, status='published')

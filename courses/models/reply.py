@@ -4,8 +4,8 @@ from courses.managers import ReplyManager
 
 
 class Reply(UserActionModel, TimeStampedModel):
-    comment = models.ForeignKey("courses.Comment", on_delete=models.CASCADE, related_name="replies")
-    body = models.CharField(blank=True, max_length=100)
+    discussion = models.ForeignKey("courses.Discussion", on_delete=models.CASCADE, related_name="replies")
+    body = models.TextField(blank=True)
 
     # Custom manager
     objects = ReplyManager()

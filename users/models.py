@@ -3,13 +3,12 @@ from django.core.validators import MinValueValidator
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, BaseUserManager, PermissionsMixin
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.conf import settings
-from django.db.models import F
+from django.db.models import F, Q
 from django.db import transaction
 from django.contrib.auth.models import Group
 from alteby.constants import TEACHER_GROUP, STUDENT_GROUP
 from main.models import AppConfiguration
 from users.managers import UserManager
-
 
 # Account Model
 class User(AbstractBaseUser, PermissionsMixin):
@@ -147,6 +146,17 @@ class User(AbstractBaseUser, PermissionsMixin):
         )
         return anonymous_user
 
+    @property
+    def courses(self):
+        from courses.models.course import Course
+        return Course.objects.filter(created_by=self)
+
+    @property
+    def lectures(self):
+        from courses.models.lecture import Lecture
+        return Lecture.objects.filter(
+        Q(created_by=self) | Q(teacher__user_id=self.id)
+        )
 
 class Student(models.Model):
 

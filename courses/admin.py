@@ -11,7 +11,7 @@ LectureExternalLink,
 Lecture, LecturePrivacy,
 CourseActivity,
 Reference,
-Comment,
+Discussion,
 Reply,
 Feedback,
 CorrectInfo,
@@ -164,7 +164,7 @@ class CourseConfig(NestedModelAdmin):
     inlines = [CoursePrivacyInline, CourseAttachementsInline, CourseUnitsInline, CoursePriceInline]
 
 
-class LectureAttachementsInline(admin.StackedInline):
+class LectureAttachementsInline(NestedStackedInline):
     model = LectureAttachement
     exclude = ['created_by', 'updated_by']
     can_delete = True
@@ -176,7 +176,7 @@ class LectureAttachementsInline(admin.StackedInline):
         qs = super(LectureAttachementsInline, self).get_queryset(request)
         return qs.select_related("lecture")
 
-class LecturePrivacyInline(admin.StackedInline):
+class LecturePrivacyInline(NestedStackedInline):
     model = LecturePrivacy
     exclude = ['created_by', 'updated_by']
     can_delete = False
@@ -188,7 +188,7 @@ class LecturePrivacyInline(admin.StackedInline):
         return qs.select_related("lecture")
 
 
-class LectureExternalLinkInline(admin.StackedInline):
+class LectureExternalLinkInline(NestedStackedInline):
     model = LectureExternalLink
     exclude = ['created_by', 'updated_by']
     can_delete = True
@@ -262,18 +262,18 @@ class ReplyInline(admin.StackedInline):
     can_delete = True
     extra = 1
     verbose_name_plural = 'Replies'
-    fk_name = 'comment'
+    fk_name = 'discussion'
 
 
-@admin.register(Comment, site=main_admin)
-class CommentConfig(admin.ModelAdmin):
-    model = Comment
+@admin.register(Discussion, site=main_admin)
+class DiscussionConfig(admin.ModelAdmin):
+    model = Discussion
 
     list_filter = ('user', 'object_type', 'created_at', 'status')
     list_display = ('user', 'object_type', 'created_at', 'status')
 
     fieldsets = (
-        ("Comment Information", {'fields': ('user', 'object_type', 'object_id', 'body', 'status')}),
+        ("Discussion Information", {'fields': ('user', 'object_type', 'object_id', 'body', 'status')}),
     )
 
     inlines = (ReplyInline,)

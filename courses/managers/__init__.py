@@ -1,3 +1,3 @@
 from .course import CustomCourseManager
-from .comment import CommentManager
+from .discussion import DiscussionManager
 from .reply import ReplyManager

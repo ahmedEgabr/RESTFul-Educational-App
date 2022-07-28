@@ -11,10 +11,10 @@ UnitSerializer, TopicsListSerializer,
 TopicDetailSerializer, UnitTopicsSerializer, DemoLectureSerializer,
 FullLectureSerializer, QuizSerializer,
 QuizResultSerializer, AttachementSerializer,
-CommentSerializer, FeedbackSerializer,
+DiscussionSerializer, FeedbackSerializer,
 QuestionSerializer, LectureExternalLinkSerializer, ReferenceSerializer
 )
-from courses.models import Course, Unit, Topic, CourseActivity, Lecture, Comment, Feedback, Quiz, Question, Choice, QuizResult
+from courses.models import Course, Unit, Topic, CourseActivity, Lecture, Discussion, Feedback, Quiz, Question, Choice, QuizResult
 from playlists.models import WatchHistory
 from functools import reduce
 import operator
@@ -601,7 +601,7 @@ class CourseTeachersList(APIView):
         return Response(general_utils.error('access_denied'), status=status.HTTP_403_FORBIDDEN)
 
 
-class CourseComments(APIView):
+class CourseDiscussions(APIView):
     def get(self, request, course_id, format=None):
 
         course, found, error = utils.get_course(course_id)
@@ -609,8 +609,8 @@ class CourseComments(APIView):
             return Response(error, status=status.HTTP_404_NOT_FOUND)
 
         if utils.allowed_to_access_course(request.user, course):
-            comments = course.comments
-            serializer = CommentSerializer(comments, many=True, context={'request': request})
+            discussions = course.discussions
+            serializer = DiscussionSerializer(discussions, many=True, context={'request': request})
             return Response(serializer.data)
 
         return Response(general_utils.error('access_denied'), status=status.HTTP_403_FORBIDDEN)
@@ -623,19 +623,19 @@ class CourseComments(APIView):
             return Response(error, status=status.HTTP_404_NOT_FOUND)
 
         if utils.allowed_to_access_course(request.user, course):
-            comment_body = request.data['body']
-            comment = Comment.objects.create(
+            discussion_body = request.data['body']
+            discussion = Discussion.objects.create(
             user=request.user,
             object=course,
-            body=comment_body
+            body=discussion_body
             )
-            serializer = CommentSerializer(comment, many=False, context={'request': request})
+            serializer = DiscussionSerializer(discussion, many=False, context={'request': request})
             return Response(serializer.data)
 
         return Response(general_utils.error('access_denied'), status=status.HTTP_403_FORBIDDEN)
 
 
-class LectureComments(APIView, PageNumberPagination):
+class LectureDiscussions(APIView, PageNumberPagination):
     def get(self, request, course_id, unit_id, topic_id, lecture_id, format=None):
 
         filter_kwargs = {
@@ -649,9 +649,9 @@ class LectureComments(APIView, PageNumberPagination):
             return Response(error, status=status.HTTP_404_NOT_FOUND)
 
         if utils.allowed_to_access_lecture(request.user, lecture):
-            comments = lecture.comments
-            comments = self.paginate_queryset(comments, request, view=self)
-            serializer = CommentSerializer(comments, many=True, context={'request': request})
+            discussions = lecture.discussions
+            discussions = self.paginate_queryset(discussions, request, view=self)
+            serializer = DiscussionSerializer(discussions, many=True, context={'request': request})
             return self.get_paginated_response(serializer.data)
 
         return Response(general_utils.error('access_denied'), status=status.HTTP_403_FORBIDDEN)
@@ -668,15 +668,13 @@ class LectureComments(APIView, PageNumberPagination):
             return Response(error, status=status.HTTP_404_NOT_FOUND)
 
         if utils.allowed_to_access_lecture(request.user, lecture):
-            comment_body = request.data['body']
-            comment = Comment.objects.create(
+            discussion_body = request.data['body']
+            discussion = Discussion.objects.create(
             user=request.user,
             object=lecture,
-            body=comment_body
+            body=discussion_body
             )
-            print(comment)
-            print(comment.id)
-            serializer = CommentSerializer(comment, many=False, context={'request': request})
+            serializer = DiscussionSerializer(discussion, many=False, context={'request': request})
             return Response(serializer.data)
 
         return Response(general_utils.error('access_denied'), status=status.HTTP_403_FORBIDDEN)

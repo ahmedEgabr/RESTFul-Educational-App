@@ -6,7 +6,7 @@ from django.contrib.contenttypes.models import ContentType
 from main.models import UserActionModel, TimeStampedModel
 from courses.models.lecture_privacy import LecturePrivacy
 from courses.models.lecture_quality import LectureQuality
-from courses.models.comment import Comment
+from courses.models.discussion import Discussion
 from moviepy.editor import VideoFileClip
 from courses.utils import get_lecture_path
 
@@ -43,8 +43,8 @@ class Lecture(UserActionModel, TimeStampedModel):
             return user in self.privacy.shared_with.all()
 
     @property
-    def comments(self):
-        return Comment.objects.filter(object_type=ContentType.objects.get_for_model(self).id, status='published')
+    def discussions(self):
+        return Discussion.objects.filter(object_type=ContentType.objects.get_for_model(self).id, status='published')
 
     def delete_qualities(self):
         LectureQuality.objects.filter(lecture=self).delete()
