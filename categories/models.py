@@ -1,11 +1,10 @@
 from django.db import models
 from main.models import UserActionModel, TimeStampedModel
 
-class Category(models.Model):
+class Category(UserActionModel, TimeStampedModel):
 
     name = models.CharField(max_length=40, unique=True)
     icon = models.FileField(upload_to='categories/icons')
-    title = models.CharField(max_length=100, blank=True)
 
     class Meta:
         verbose_name_plural = 'Categories'
@@ -23,7 +22,7 @@ class ReferenceCategory(UserActionModel, TimeStampedModel):
     def __str__(self):
         return self.name
 
-class Tag(models.Model):
+class Tag(UserActionModel, TimeStampedModel):
     name = models.CharField(max_length=100)
 
     def __str__(self):

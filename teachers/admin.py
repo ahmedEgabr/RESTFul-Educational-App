@@ -7,8 +7,9 @@ from courses.admin import (
 UnitTopicsInline, CourseUnitsInline, CoursePrivacyInline, CourseAttachementsInline, CoursePriceInline,
 LectureAttachementsInline, LecturePrivacyInline, LectureExternalLinkInline, ReplyInline
 )
-from courses.models import Course, Lecture, Discussion
-from .admin_forms import LectureForm, CourseEnrollmentForm
+from courses.models import Course, Lecture, Discussion, Reference
+from categories.models import Tag, Category, ReferenceCategory
+from .admin_forms import LectureForm, CourseEnrollmentForm, ReferenceForm
 from payment.models import CourseEnrollment
 from .admin_forms import LectureForm
 from courses.tasks import detect_and_convert_lecture_qualities, extract_and_set_lecture_audio
@@ -157,3 +158,70 @@ class DiscussionConfig(admin.ModelAdmin):
         return qs.filter(object_id__in=lectures_ids)
 
     inlines = (ReplyInline,)
+
+
+@admin.register(Tag, site=teacher_admin)
+class TagConfig(admin.ModelAdmin):
+    model = Tag
+
+    list_filter = ('name', 'created_at',)
+    ordering = ('-created_at',)
+    list_display = ('name', 'created_at',)
+    readonly_fields = ('created_at',)
+
+    fieldsets = (
+        (None, {'fields': ('name', 'created_at')}),
+    )
+
+@admin.register(Category, site=teacher_admin)
+class CategoryConfig(admin.ModelAdmin):
+    model = Category
+
+    list_filter = ('name', 'created_at',)
+    ordering = ('-created_at',)
+    list_display = ('name', 'created_at',)
+    readonly_fields = ('created_at',)
+
+    fieldsets = (
+        (None, {'fields': ('name', 'created_at')}),
+    )
+
+
+@admin.register(Reference, site=teacher_admin)
+class ReferenceConfig(admin.ModelAdmin):
+    model = Reference
+    form = ReferenceForm
+
+    list_filter = ('name', 'type', 'categories', 'created_at',)
+    ordering = ('-created_at',)
+    list_display = ('name', 'type', 'created_at',)
+    readonly_fields = ('created_at',)
+
+    fieldsets = (
+        (None, {'fields': ('name', 'type', 'link', 'categories', 'created_at')}),
+    )
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(created_by=request.user)
+
+@admin.register(ReferenceCategory, site=teacher_admin)
+class ReferenceCategoryConfig(admin.ModelAdmin):
+    model = ReferenceCategory
+
+    list_filter = ('name', 'created_at',)
+    ordering = ('-created_at',)
+    list_display = ('name', 'created_at',)
+    readonly_fields = ('created_at',)
+
+    fieldsets = (
+        (None, {'fields': ('name', 'created_at')}),
+    )
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(created_by=request.user)
