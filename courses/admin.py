@@ -26,7 +26,8 @@ Unit,
 Topic,
 LectureQuality,
 Note,
-CoursePrice
+CoursePrice,
+Privacy
 )
 from .tasks import detect_and_convert_lecture_qualities, extract_and_set_lecture_audio
 
@@ -88,10 +89,26 @@ class CourseUnitsInline(NestedStackedInline):
 
 class CoursePrivacyInline(NestedStackedInline):
     model = CoursePrivacy
+    fields = (
+    'option',
+    'shared_with',
+    'period',
+    'period_type',
+    'available_from',
+    'enrollment_period',
+    'enrollment_period_type',
+    'is_downloadable',
+    'is_downloadable_for_enrolled_users_only',
+    'is_quiz_available',
+    'is_quiz_available_for_enrolled_users_only',
+    'is_attachements_available',
+    "is_attachements_available_for_enrolled_users_only"
+    )
     exclude = ['created_by', 'updated_by']
     can_delete = False
     verbose_name_plural = 'Privacy'
     fk_name = 'course'
+    max_num = 1
 
     def get_queryset(self, request):
         qs = super(CoursePrivacyInline, self).get_queryset(request)
@@ -164,7 +181,7 @@ class CourseConfig(NestedModelAdmin):
     inlines = [CoursePrivacyInline, CourseAttachementsInline, CourseUnitsInline, CoursePriceInline]
 
 
-class LectureAttachementsInline(NestedStackedInline):
+class LectureAttachementsInline(admin.StackedInline):
     model = LectureAttachement
     exclude = ['created_by', 'updated_by']
     can_delete = True
@@ -176,19 +193,36 @@ class LectureAttachementsInline(NestedStackedInline):
         qs = super(LectureAttachementsInline, self).get_queryset(request)
         return qs.select_related("lecture")
 
-class LecturePrivacyInline(NestedStackedInline):
+class LecturePrivacyInline(admin.StackedInline):
     model = LecturePrivacy
+    fields = (
+    'option',
+    'shared_with',
+    # 'period',
+    # 'period_type',
+    # 'available_from',
+    # 'enrollment_period',
+    # 'enrollment_period_type',
+    'is_downloadable',
+    'is_downloadable_for_enrolled_users_only',
+    'is_quiz_available',
+    'is_quiz_available_for_enrolled_users_only',
+    'is_attachements_available',
+    "is_attachements_available_for_enrolled_users_only"
+    )
     exclude = ['created_by', 'updated_by']
     can_delete = False
     verbose_name_plural = 'Privacy'
     fk_name = 'lecture'
+    max_num = 1
+
 
     def get_queryset(self, request):
         qs = super(LecturePrivacyInline, self).get_queryset(request)
         return qs.select_related("lecture")
 
 
-class LectureExternalLinkInline(NestedStackedInline):
+class LectureExternalLinkInline(admin.StackedInline):
     model = LectureExternalLink
     exclude = ['created_by', 'updated_by']
     can_delete = True

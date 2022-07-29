@@ -3,7 +3,7 @@ from rest_framework.decorators import api_view
 from rest_framework.views import APIView
 from rest_framework import status
 from .serializers import CourseEnrollmentSerializer
-from courses.utils import get_course, allowed_to_access_course
+from courses.utils import get_course
 import alteby.utils as general_utils
 
 class CoursesEnrollments(APIView):
@@ -29,7 +29,7 @@ class CoursesEnrollments(APIView):
         if not found:
             return Response(error, status=status.HTTP_404_NOT_FOUND)
 
-        if not allowed_to_access_course(request.user, course):
+        if not course.is_allowed_to_access_course(request.user):
             return Response(general_utils.error('access_denied'), status=status.HTTP_403_FORBIDDEN)
 
         serializer = CourseEnrollmentSerializer(data=request_body, context={'request': request})

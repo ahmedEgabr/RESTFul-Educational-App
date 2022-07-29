@@ -101,6 +101,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # 'admin_reorder.middleware.ModelAdminReorder',
     'alteby.middleware.CoursePermissionMiddleware',
+    # 'alteby.middlewares.TimezoneMiddleware',
     'django_currentuser.middleware.ThreadLocalUserMiddleware',
 
 ]
@@ -137,7 +138,7 @@ WSGI_APPLICATION = 'alteby.wsgi.application'
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = "Africa/Cairo"
 
 USE_I18N = True
 

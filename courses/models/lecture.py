@@ -32,13 +32,37 @@ class Lecture(UserActionModel, TimeStampedModel):
           return self.title
 
     def atomic_post_save(self, sender, created, **kwargs):
-        LecturePrivacy.objects.get_or_create(lecture=self)
+        if not hasattr(self, "privacy"):
+            self.__class__.create_privacy(self)
 
-    def can_access(self, user):
-        if self.privacy.is_public():
+    @classmethod
+    def create_privacy(cls, lecture):
+        course_privacy = lecture.topic.unit.course.privacy
+        lecture_privacy = LecturePrivacy.objects.get_or_create(
+        lecture=lecture,
+        is_downloadable=course_privacy.is_downloadable,
+        is_downloadable_for_enrolled_users_only=course_privacy.is_downloadable_for_enrolled_users_only,
+        is_quiz_available=course_privacy.is_quiz_available,
+        is_quiz_available_for_enrolled_users_only=course_privacy.is_quiz_available_for_enrolled_users_only,
+        is_attachements_available=course_privacy.is_attachements_available,
+        is_attachements_available_for_enrolled_users_only=course_privacy.is_attachements_available_for_enrolled_users_only
+        )
+        return lecture_privacy
+
+
+    def is_allowed_to_access_lecture(self, user):
+        access_granted = self.check_privacy(user)
+        if access_granted or (user.is_student and user.student_profile.is_enrolled(self.topic.unit.course) ):
             return True
-        elif self.privacy.is_private():
+        return False
+
+    def check_privacy(self, user):
+        if self.privacy.is_private:
             return False
+        elif self.privacy.is_public:
+            return True
+        elif self.privacy.is_public_for_limited_period:
+            return self.privacy.is_available_during_limited_period
         else:
             return user in self.privacy.shared_with.all()
 

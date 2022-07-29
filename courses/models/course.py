@@ -38,13 +38,26 @@ class Course(UserActionModel):
           return self.title
 
     def atomic_post_save(self, sender, created, **kwargs):
-        CoursePrivacy.objects.get_or_create(course=self)
+        if not hasattr(self, "privacy"):
+            self.__class__.create_privacy(self)
 
-    def can_access(self, user):
-        if self.privacy.is_public():
+    @classmethod
+    def create_privacy(cls, course):
+        return CoursePrivacy.objects.get_or_create(course=course)
+
+    def is_allowed_to_access_course(self, user):
+        access_granted = self.check_privacy(user)
+        if access_granted or (user.is_student and user.student_profile.is_enrolled(course=self)):
             return True
-        elif self.privacy.is_private():
+        return False
+
+    def check_privacy(self, user):
+        if self.privacy.is_private:
             return False
+        elif self.privacy.is_public:
+            return True
+        elif self.privacy.is_public_for_limited_period:
+            return self.privacy.is_available_during_limited_period
         else:
             return user in self.privacy.shared_with.all()
 

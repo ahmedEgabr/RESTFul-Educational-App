@@ -1,6 +1,7 @@
 from django.contrib import admin
 from nested_inline.admin import NestedModelAdmin
 from django.db import transaction
+from django.db.models import Q
 from alteby.admin_sites import teacher_admin
 from courses.admin import (
 UnitTopicsInline, CourseUnitsInline, CoursePrivacyInline, CourseAttachementsInline, CoursePriceInline,
@@ -58,7 +59,7 @@ class CourseConfig(NestedModelAdmin):
 
 
 @admin.register(Lecture, site=teacher_admin)
-class LectureConfig(NestedModelAdmin):
+class LectureConfig(admin.ModelAdmin):
     model = Lecture
     form = LectureForm
 
@@ -72,7 +73,9 @@ class LectureConfig(NestedModelAdmin):
         qs = super().get_queryset(request)
         if request.user.is_superuser:
             return qs
-        return qs.filter(created_by=request.user)
+        return qs.filter(
+        Q(created_by=request.user) | Q(teacher__user_id=request.user.id)
+        )
 
     def save_model(self, request, new_lecture, form, change):
         # Update lecture duration

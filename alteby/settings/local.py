@@ -6,13 +6,13 @@ DEBUG = True
 INSTALLED_APPS +=[
     # this for debugging SQL
     'debug_toolbar',
-    'silk'
+    # 'silk'
 ]
 
 MIDDLEWARE += [
     # For debugging
     'debug_toolbar.middleware.DebugToolbarMiddleware',
-    'silk.middleware.SilkyMiddleware',
+    # 'silk.middleware.SilkyMiddleware',
 ]
 
 # This for degugging
@@ -31,4 +31,4 @@ DATABASES = {
 }
 
 # SILK CONFIG
-SILKY_PYTHON_PROFILER = True 
+# SILKY_PYTHON_PROFILER = True

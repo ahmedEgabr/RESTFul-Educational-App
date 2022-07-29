@@ -77,7 +77,7 @@ if settings.DEBUG:
     urlpatterns += [
     # Debug tool Bar
     path('__debug__/', include(debug_toolbar.urls)),
-    path('silk/', include('silk.urls', namespace='silk')),
+    # path('silk/', include('silk.urls', namespace='silk')),
     re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
 
     # Swagger

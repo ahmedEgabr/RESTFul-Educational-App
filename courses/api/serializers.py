@@ -13,7 +13,6 @@ from alteby.utils import seconds_to_duration
 from categories.api.serializers import CategorySerializer, TagSerializer
 from django.db.models import Sum
 from payment.models import CourseEnrollment
-from courses.utils import allowed_to_access_lecture
 from users.api.serializers import TeacherSerializer, BasicUserSerializer
 
 
@@ -27,7 +26,7 @@ class LectureIndexSerialiser(serializers.ModelSerializer):
 
     def get_can_access(self, lecture):
         user = self.context.get('user', None)
-        return lecture.can_access(user) or lecture.is_enrolled
+        return lecture.check_privacy(user) or lecture.is_enrolled
 
 
 class TopicIndexSerialiser(serializers.ModelSerializer):
@@ -134,12 +133,46 @@ class QuizResultSerializer(serializers.ModelSerializer):
 class CoursePrivacySerializer(serializers.ModelSerializer):
     class Meta:
         model = CoursePrivacy
-        exclude = ("created_at", "updated_at", "created_by", "updated_by")
+        fields =(
+        "id",
+        "course",
+        "option",
+        "available_from",
+        "is_available_during_limited_period",
+        "period",
+        "period_type",
+        "enrollment_period",
+        "enrollment_period_type",
+        "is_downloadable",
+        "is_downloadable_for_enrolled_users_only",
+        "is_quiz_available",
+        "is_quiz_available_for_enrolled_users_only",
+        "is_attachements_available",
+        "is_attachements_available_for_enrolled_users_only",
+        "shared_with"
+        )
 
 class LecturePrivacySerializer(serializers.ModelSerializer):
     class Meta:
         model = LecturePrivacy
-        exclude = ("created_at", "updated_at")
+        fields =(
+        "id",
+        "course",
+        "option",
+        # "available_from",
+        # "is_available_during_limited_period",
+        # "period",
+        # "period_type",
+        # "enrollment_period",
+        # "enrollment_period_type",
+        "is_downloadable",
+        "is_downloadable_for_enrolled_users_only",
+        "is_quiz_available",
+        "is_quiz_available_for_enrolled_users_only",
+        "is_attachements_available",
+        "is_attachements_available_for_enrolled_users_only",
+        "shared_with"
+        )
 
 class CourseActivitySerializer(serializers.ModelSerializer):
     class Meta:

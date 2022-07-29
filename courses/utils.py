@@ -55,19 +55,6 @@ def get_object(model, filter_kwargs, prefetch_related=None, select_related=None)
     except model.DoesNotExist:
         return None, False, general_utils.error('not_found')
 
-def allowed_to_access_lecture(user, lecture):
-    if lecture.can_access(user) or is_enrolled(user, lecture.topic.unit.course):
-        return True
-    return False
-
-def allowed_to_access_course(user, course):
-    if course.can_access(user) or is_enrolled(user, course):
-        return True
-    return False
-
-def is_enrolled(user, course):
-    return user.is_student and user.student_profile.is_enrolled(course)
-
 
 def get_resolution(quality):
     if quality == 144:

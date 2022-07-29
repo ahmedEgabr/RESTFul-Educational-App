@@ -8,7 +8,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from courses.models import Course
 from courses.utils import get_object
-from courses.utils import allowed_to_access_course, get_object
+from courses.utils import get_object
 import alteby.utils as general_utils
 from django.conf import settings
 from re import sub
@@ -51,7 +51,7 @@ class CoursePermissionMiddleware(MiddlewareMixin):
             course, found, error = get_object(model=Course, filter_kwargs=filter_kwargs)
             if not found:
                 return JsonResponse(error, status=404)
-            if not allowed_to_access_course(request.user, course):
+            if not course.is_allowed_to_access_course(request.user):
                 return JsonResponse(general_utils.error('access_denied'), status=403)
 
     def is_index_requested(self):

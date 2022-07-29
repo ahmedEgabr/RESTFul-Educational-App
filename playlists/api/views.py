@@ -85,7 +85,7 @@ class PlaylistLecture(APIView):
         if not found:
             return Response(error, status=status.HTTP_404_NOT_FOUND)
 
-        if utils.allowed_to_access_lecture(request.user, lecture):
+        if lecture.is_allowed_to_access_lecture(request.user):
             playlist, found, error = self.get_playlist(request, playlist_id)
             if not found:
                 return Response(error, status=status.HTTP_404_NOT_FOUND)
@@ -157,7 +157,7 @@ class FavoriteController(APIView):
         if not found:
             return Response(error, status=status.HTTP_404_NOT_FOUND)
 
-        access_granted = utils.allowed_to_access_lecture(request.user, lecture)
+        access_granted = lecture.is_allowed_to_access_lecture(request.user)
         if access_granted:
             favorites = self.get_favorite_playlist(request)
             favorites.add(lecture)
