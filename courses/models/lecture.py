@@ -57,7 +57,9 @@ class Lecture(UserActionModel, TimeStampedModel):
         return False
 
     def check_privacy(self, user):
-        if self.privacy.is_private:
+        if not hasattr(self, "privacy"):
+            return False
+        elif self.privacy.is_private:
             return False
         elif self.privacy.is_public:
             return True

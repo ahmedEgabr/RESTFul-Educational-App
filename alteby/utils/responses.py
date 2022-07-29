@@ -1,9 +1,10 @@
 
-def error(error_key):
+def error(error_key, **kwargs):
     return {
         'status': False,
         'message': 'error',
-        'error_description': error_messages[error_key]
+        'error_description': error_messages[error_key],
+        **kwargs
     }
 
 def success(success_key):
@@ -21,11 +22,15 @@ error_messages = {
     'page_access_denied': 'You don\'t have access to preview this page.',
     'empty_quiz_answers': "Quiz answers cannot be empty.",
     'incorrect_left_off': 'Left off at value must be positive and numeric.',
-    'incorrect_is_finished': 'is_finished value must be boolean.'
+    'incorrect_is_finished': 'is_finished value must be boolean.',
+    'playlist_exists': 'Playlist with this name already exists.'
 }
 
 success_messages = {
     'quiz_answer_submitted': "Quiz answers has been recorded.",
     'enrolled': "Course Successfully Enrolled!",
-    'account_deactivated': "Account Deactivated Successfully"
+    'account_deactivated': "Account Deactivated Successfully",
+    'playlist_created': 'Playlist created successfully!',
+    'added_to_playlist': "Successfully added.",
+    'deleted': 'Successfully Deleted.'
 }
