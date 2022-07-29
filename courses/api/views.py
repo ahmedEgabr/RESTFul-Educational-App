@@ -606,7 +606,7 @@ class CourseDiscussions(APIView):
         course, found, error = utils.get_course(course_id)
         if not found:
             return Response(error, status=status.HTTP_404_NOT_FOUND)
-            discussions = course.discussions
+            discussions = course.discussions.all()
             serializer = DiscussionSerializer(discussions, many=True, context={'request': request})
             return Response(serializer.data)
 
@@ -642,7 +642,6 @@ class LectureDiscussions(APIView, PageNumberPagination):
         'topic__unit__course__id': course_id
         }
         lecture, found, error = utils.get_object(model=Lecture, filter_kwargs=filter_kwargs, prefetch_related=['privacy'])
-        print(lecture)
         if not found:
             return Response(error, status=status.HTTP_404_NOT_FOUND)
 
