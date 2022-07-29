@@ -91,4 +91,4 @@ class Course(UserActionModel):
 
     @property
     def discussions(self):
-        return Discussion.objects.filter(object_type=ContentType.objects.get_for_model(self).id, status='published')
+        return Discussion.objects.filter(object_type=ContentType.objects.get_for_model(self).id, status='approved')

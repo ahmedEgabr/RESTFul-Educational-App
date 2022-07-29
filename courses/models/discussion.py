@@ -10,7 +10,7 @@ class Discussion(TimeStampedModel):
 
     STATUS_CHOICES = Choices(
         ('pending', 'Pending'),
-        ('published', 'Published'),
+        ('approved', 'Approved'),
     )
 
     user = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="discussions")

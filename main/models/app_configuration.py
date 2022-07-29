@@ -19,6 +19,8 @@ class AppConfiguration(TimeStampedModel):
     @classmethod
     def is_reached_screenshots_limit(cls, screenshots_num):
         app_config = cls.objects.filter(is_active=True).first()
+        if not app_config:
+            return False
         if screenshots_num >= app_config.screenshots_limit:
             return True
         return False

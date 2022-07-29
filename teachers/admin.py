@@ -17,7 +17,7 @@ from courses.tasks import detect_and_convert_lecture_qualities, extract_and_set_
 class CourseConfig(NestedModelAdmin):
     model = Course
 
-    list_filter = ('categories', 'language', 'price', 'created_by', 'updated_by', 'date_created')
+    list_filter = ('categories', 'language', 'price', 'date_created')
     ordering = ('-date_created',)
     list_display = ('title', 'date_created')
     readonly_fields = ('created_by', 'updated_by')
@@ -106,39 +106,42 @@ class LectureConfig(NestedModelAdmin):
         return new_lecture
 
 
-# @admin.register(CourseEnrollment, site=teacher_admin)
+@admin.register(CourseEnrollment, site=teacher_admin)
 class CourseEnrollmentConfig(admin.ModelAdmin):
     model = CourseEnrollment
-    form = CourseEnrollmentForm
 
     list_filter = ('user', 'course', 'payment_method', 'payment_type', 'date_created')
     ordering = ('-date_created',)
     list_display = ('user', 'course', 'payment_method', 'payment_type', 'date_created')
+    readonly_fields = ('user', 'course', 'payment_method', 'payment_type')
 
     fieldsets = (
-        ("Course Enrollment Information", {'fields': ('user', 'course', 'payment_method', 'payment_type')}),
+        ("Enrollment Information", {'fields': ('user', 'course', 'payment_method', 'payment_type')}),
     )
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         if request.user.is_superuser:
             return qs
-        return qs.filter(created_by=request.user)
+        return qs.filter(course__created_by=request.user)
 
-
-from django.contrib.contenttypes.models import ContentType
 
 
 @admin.register(Discussion, site=teacher_admin)
 class DiscussionConfig(admin.ModelAdmin):
     model = Discussion
 
-    list_filter = ('user', 'object_type', 'created_at', 'status')
-    list_display = ('user', 'object_type', 'created_at', 'status')
-    readonly_fields = ("user", "body")
+    list_filter = ('user', 'created_at', 'status')
+    list_display = ('user', 'lecture', 'created_at', 'status')
+    readonly_fields = ("user", "lecture", "body")
     fieldsets = (
-        ("Discussion Information", {'fields': ('user', 'body', 'status')}),
+        ("Discussion Information", {'fields': ('user', 'body', 'lecture', 'status')}),
     )
+
+    @staticmethod
+    def lecture(obj):
+        lecture = Lecture.objects.get(id=obj.object_id)
+        return "{0}".format(lecture.title)
 
     def get_queryset(self, request):
         lectures = request.user.lectures
