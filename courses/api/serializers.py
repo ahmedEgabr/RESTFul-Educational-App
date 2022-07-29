@@ -157,7 +157,7 @@ class LecturePrivacySerializer(serializers.ModelSerializer):
         model = LecturePrivacy
         fields =(
         "id",
-        "course",
+        "lecture",
         "option",
         # "available_from",
         # "is_available_during_limited_period",

@@ -642,11 +642,12 @@ class LectureDiscussions(APIView, PageNumberPagination):
         'topic__unit__course__id': course_id
         }
         lecture, found, error = utils.get_object(model=Lecture, filter_kwargs=filter_kwargs, prefetch_related=['privacy'])
+        print(lecture)
         if not found:
             return Response(error, status=status.HTTP_404_NOT_FOUND)
 
         if lecture.is_allowed_to_access_lecture(request.user):
-            discussions = lecture.discussions
+            discussions = lecture.discussions.all()
             discussions = self.paginate_queryset(discussions, request, view=self)
             serializer = DiscussionSerializer(discussions, many=True, context={'request': request})
             return self.get_paginated_response(serializer.data)
