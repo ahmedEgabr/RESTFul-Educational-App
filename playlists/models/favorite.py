@@ -3,7 +3,7 @@ from django.db import models
 
 class Favorite(models.Model):
     user = models.OneToOneField("users.User", on_delete=models.CASCADE, related_name="favorites")
-    lecture = models.ManyToManyField("courses.Lecture", blank=True)
+    lectures = models.ManyToManyField("courses.Lecture", blank=True)
 
     def __str__(self):
           return self.user.email

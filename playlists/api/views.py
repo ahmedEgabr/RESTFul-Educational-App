@@ -68,7 +68,7 @@ class PlaylistLectures(APIView, PageNumberPagination):
         if not playlist:
             return Response(general_utils.error("not_found"), status=status.HTTP_404_NOT_FOUND)
 
-        lectures = playlist.lectures.all().prefetch_related('privacy__shared_with').annotate(
+        lectures = playlist.lectures.prefetch_related('privacy__shared_with').annotate(
                 viewed=Exists(
                             CourseActivity.objects.filter(lecture=OuterRef('pk'), user=self.request.user, is_finished=True)
                             ),
@@ -132,7 +132,7 @@ class PlayListLectureDestroy(APIView):
         return Response(general_utils.success("deleted"))
 
 
-class FavoriteController(APIView):
+class FavoriteListUpdate(APIView, PageNumberPagination):
 
     """
     List all lecture of favorites
@@ -140,7 +140,13 @@ class FavoriteController(APIView):
 
     def get(self, request, format=None):
         favorites, created = Favorite.objects.get_or_create(user=request.user)
-        lectures = favorites.lectures.prefetch_related('privacy__shared_with')
+        lectures = favorites.lectures.prefetch_related('privacy__shared_with').annotate(
+                viewed=Exists(
+                            CourseActivity.objects.filter(lecture=OuterRef('pk'), user=self.request.user, is_finished=True)
+                            ),
+                left_off_at=Coalesce(Subquery(CourseActivity.objects.filter(lecture=OuterRef('pk'), user=self.request.user).values('left_off_at')), 0, output_field=FloatField())
+        ).all()
+
         lectures = self.paginate_queryset(lectures, request, view=self)
         serializer = DemoLectureSerializer(lectures, many=True, context={'request': request})
         return self.get_paginated_response(serializer.data)
@@ -167,13 +173,14 @@ class FavoriteController(APIView):
 
         access_granted = lecture.is_allowed_to_access_lecture(request.user)
         if access_granted:
-            favorites = self.get_favorite_playlist(request)
+            favorites, created = Favorite.objects.get_or_create(user=request.user)
             favorites.add(lecture)
-            serializer = FavoriteSerializer(favorites, many=False, context={'request': request})
-            return Response(serializer.data)
+            return Response(general_utils.success("added_to_playlist"))
 
         return Response(general_utils.error('access_denied'), status=status.HTTP_403_FORBIDDEN)
 
+
+class FavoriteLectureDestroy(APIView):
     def delete(self, request, lecture_id, format=None):
 
         filter_kwargs = {
@@ -183,16 +190,9 @@ class FavoriteController(APIView):
         if not found:
             return Response(error, status=status.HTTP_404_NOT_FOUND)
 
-        favorites = self.get_favorite_playlist(request)
+        favorites, created = Favorite.objects.get_or_create(user=request.user)
         favorites.remove(lecture)
-        serializer = FavoriteSerializer(favorites, many=False, context={'request': request})
-        return Response(serializer.data)
-
-
-    def get_favorite_playlist(self, request):
-        favorites, created =  Favorite.objects.get_or_create(user=request.user)
-        return favorites
-
+        return Response(general_utils.success("deleted"))
 
 class WatchHistoryList(APIView, PageNumberPagination):
 
