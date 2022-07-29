@@ -135,27 +135,21 @@ class CourseEnrollmentConfig(admin.ModelAdmin):
 class DiscussionConfig(admin.ModelAdmin):
     model = Discussion
 
-    list_filter = ('user', 'created_at', 'status')
-    list_display = ('user', 'lecture', 'created_at', 'status')
-    readonly_fields = ("user", "lecture", "body")
+    list_filter = ('user', 'course', 'topic', 'lecture', 'created_at', 'status')
+    list_display = ('user', 'course', 'topic', 'lecture', 'created_at', 'status')
+    readonly_fields = ("user", "course", "topic", "lecture", "body")
     fieldsets = (
-        ("Discussion Information", {'fields': ('user', 'body', 'lecture', 'status')}),
+        ("Discussion Information", {'fields': ('user', 'body', 'course', 'topic', 'lecture', 'status')}),
     )
 
-    @staticmethod
-    def lecture(obj):
-        lecture = Lecture.objects.get(id=obj.object_id)
-        return "{0}".format(lecture.title)
-
     def get_queryset(self, request):
-        lectures = request.user.lectures
-        lectures_ids = []
-        if lectures:
-            lectures_ids = lectures.values_list("id", flat=True)
+        courses = request.user.created_courses.all()
+        if not courses:
+            courses = []
         qs = super().get_queryset(request)
         if request.user.is_superuser:
             return qs
-        return qs.filter(object_id__in=lectures_ids)
+        return qs.filter(course__in=courses)
 
     inlines = (ReplyInline,)
 

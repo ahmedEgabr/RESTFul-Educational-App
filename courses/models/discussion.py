@@ -15,11 +15,14 @@ class Discussion(TimeStampedModel):
 
     user = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="discussions")
 
-    choices = models.Q(app_label = 'courses', model = 'course') | models.Q(app_label = 'courses', model = 'lecture')
-
-    object_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, limit_choices_to=choices, related_name='discussions')
-    object_id = models.PositiveIntegerField()
-    object = GenericForeignKey('object_type', 'object_id')
+    # choices = models.Q(app_label = 'courses', model = 'course') | models.Q(app_label = 'courses', model = 'lecture')
+    #
+    # object_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, limit_choices_to=choices, related_name='discussions')
+    # object_id = models.PositiveIntegerField()
+    # object = GenericForeignKey('object_type', 'object_id')
+    course = models.ForeignKey("courses.Course", on_delete=models.CASCADE, related_name="discussions")
+    topic = models.ForeignKey("courses.Topic", on_delete=models.CASCADE, related_name="discussions")
+    lecture = models.ForeignKey("courses.Lecture", on_delete=models.CASCADE, related_name="discussions")
 
     body = models.TextField()
     status = models.CharField(max_length=100, choices=STATUS_CHOICES, default=STATUS_CHOICES.pending)
@@ -27,10 +30,12 @@ class Discussion(TimeStampedModel):
     # Default manager
     objects = DiscussionManager()
 
-    class Meta:
-        indexes = [
-            models.Index(fields=["object_type", "object_id"]),
-        ]
-
     def __str__(self):
         return f'{self.user.email}-{self.body}'
+
+    def save(self, *args, **kwargs):
+        if not self.course:
+            self.course = self.lecture.topic.unit.course
+        if not self.topic:
+            self.topic = self.lecture.topic
+        return super(Discussion, self).save(*args, **kwargs)

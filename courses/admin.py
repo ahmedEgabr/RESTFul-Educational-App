@@ -303,11 +303,11 @@ class ReplyInline(admin.StackedInline):
 class DiscussionConfig(admin.ModelAdmin):
     model = Discussion
 
-    list_filter = ('user', 'object_type', 'created_at', 'status')
-    list_display = ('user', 'object_type', 'created_at', 'status')
+    list_filter = ('user', 'course', 'topic', 'lecture', 'created_at', 'status')
+    list_display = ('user', 'course', 'topic', 'lecture', 'created_at', 'status')
 
     fieldsets = (
-        ("Discussion Information", {'fields': ('user', 'object_type', 'object_id', 'body', 'status')}),
+        ("Discussion Information", {'fields': ('user', 'course', 'topic', 'lecture', 'body', 'status')}),
     )
 
     inlines = (ReplyInline,)
