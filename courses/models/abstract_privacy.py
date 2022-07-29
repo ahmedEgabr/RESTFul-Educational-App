@@ -80,6 +80,9 @@ class Privacy(UserActionModel, TimeStampedModel):
     verbose_name="Is Attachements Available for Enrolled Users Only",
     )
 
+    class Meta:
+        abstract = True
+        
     def clean_fields(self, **kwargs):
         if self.option == self.PRIVACY_CHOICES.limited_period:
             if not self.period:
