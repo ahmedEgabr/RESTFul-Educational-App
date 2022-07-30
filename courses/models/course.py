@@ -23,7 +23,6 @@ class Course(UserActionModel):
     description = RichTextField()
     objectives = RichTextField(blank=True, null=True)
     about = models.TextField(blank=True, null=True)
-    price = models.DecimalField(max_digits=10, decimal_places=2)
     categories = models.ManyToManyField("categories.Category", blank=True)
     date_created = models.DateTimeField(auto_now_add=True)
     quiz = models.OneToOneField("courses.Quiz", on_delete=models.CASCADE, blank=True, null=True)

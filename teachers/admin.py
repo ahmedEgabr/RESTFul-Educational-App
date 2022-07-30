@@ -19,7 +19,7 @@ from courses.tasks import detect_and_convert_lecture_qualities, extract_and_set_
 class CourseConfig(NestedModelAdmin):
     model = Course
 
-    list_filter = ('categories', 'language', 'price', 'date_created')
+    list_filter = ('categories', 'language', 'date_created')
     ordering = ('-date_created',)
     list_display = ('title', 'date_created')
     readonly_fields = ('created_by', 'updated_by')
@@ -32,7 +32,6 @@ class CourseConfig(NestedModelAdmin):
         'description',
         'objectives',
         'about',
-        'price',
         'language',
         'categories',
         'tags',

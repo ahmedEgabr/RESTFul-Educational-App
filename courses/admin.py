@@ -145,7 +145,7 @@ class CoursePriceInline(NestedStackedInline):
 class CourseConfig(NestedModelAdmin):
     model = Course
 
-    list_filter = ('categories', 'language', 'price', 'created_by', 'updated_by', 'date_created')
+    list_filter = ('categories', 'language', 'created_by', 'updated_by', 'date_created')
     ordering = ('-date_created',)
     list_display = ('title', 'date_created')
     readonly_fields = ('created_by', 'updated_by')
@@ -158,7 +158,6 @@ class CourseConfig(NestedModelAdmin):
         'description',
         'objectives',
         'about',
-        'price',
         'language',
         'categories',
         'tags',
