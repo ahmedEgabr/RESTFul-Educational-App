@@ -84,6 +84,13 @@ class AuthTokenSerializer(serializers.Serializer):
                 'message': msg
             })
 
+        if user.is_blocked:
+            msg = 'User account has been temporarily blocked due to violating the rules.'
+            raise serializers.ValidationError({
+                'status': 'error',
+                'message': msg
+            })
+
         if not user.is_active:
             msg = 'User account is disabled.'
             raise serializers.ValidationError({

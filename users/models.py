@@ -19,6 +19,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     date_joined = models.DateTimeField(verbose_name="Date Joined", auto_now_add=True)
     last_login = models.DateTimeField(verbose_name="Last Login", auto_now=True)
     is_active = models.BooleanField('Active status', default=True)
+    is_blocked = models.BooleanField('Is Blocked', default=False)
     is_staff = models.BooleanField('Staff status', default=False)
     is_teacher = models.BooleanField('Teacher status', default=False)
     is_student = models.BooleanField('Student status', default=False)
@@ -34,6 +35,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     def save(self, created=None, *args, **kwargs):
         super().save(*args, **kwargs)
 
+    def block(self):
+        if not self.is_blocked:
+            self.is_blocked = True
+            self.save()
+        return True
+        
     def activate(self):
         # Activate the User
         if not self.is_active:

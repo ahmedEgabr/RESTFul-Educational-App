@@ -29,8 +29,8 @@ def pre_save_user(sender, instance=None, created=False, **kwargs):
 
 @receiver(post_save, sender=UserModel)
 def post_save_user(sender, instance=None, created=False, **kwargs):
-    if instance.is_active and instance.is_reached_screenshots_limit:
-        instance.deactivate()
+    if instance.is_reached_screenshots_limit:
+        instance.block()
 
 @receiver(user_logged_in)
 def on_user_logged_in(sender, request, **kwargs):

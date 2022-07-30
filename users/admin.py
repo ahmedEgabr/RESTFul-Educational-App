@@ -13,8 +13,8 @@ from django.contrib import messages
 class UserConfig(UserAdmin):
     model = User
     change_password_form = AdminPasswordChangeForm
-    actions = ["activate_selected_users", "deactivate_selected_users"]
-    list_filter = ('email', 'username', 'is_active', 'is_staff')
+    actions = ["activate_selected_users", "deactivate_selected_users", "block_selected_users"]
+    list_filter = ('email', 'username', 'is_active', 'is_blocked', 'is_staff', 'screenshots_taken')
     ordering = ('-date_joined',)
     list_display = ('email', 'username',
                     'is_active', 'is_staff')
@@ -22,7 +22,7 @@ class UserConfig(UserAdmin):
 
     fieldsets = (
         ("User Information", {'fields': ('email', 'username', 'password', 'screenshots_taken')}),
-        ('Permissions', {'fields': ('is_staff', 'is_active', 'is_student', 'is_teacher', 'is_superuser', 'groups', 'user_permissions')}),
+        ('Permissions', {'fields': ('is_staff', 'is_active', 'is_blocked', 'is_student', 'is_teacher', 'is_superuser', 'groups', 'user_permissions')}),
     )
 
     def activate_selected_users(self, request, queryset):
@@ -44,6 +44,16 @@ class UserConfig(UserAdmin):
                 self.message_user(request, message, level=messages.SUCCESS)
             else:
                 message = "Cannot deactivate user: {0}.".format(user.username)
+                self.message_user(request, message, level=messages.ERROR)
+        return
+
+    def block_selected_users(self, request, queryset):
+        for user in queryset:
+            if user.block():
+                message = "User: {0} successfully blocked.".format(user.username)
+                self.message_user(request, message, level=messages.SUCCESS)
+            else:
+                message = "Cannot block user: {0}.".format(user.username)
                 self.message_user(request, message, level=messages.ERROR)
         return
 
