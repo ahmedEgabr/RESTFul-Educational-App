@@ -11,6 +11,7 @@ from courses.models import Course, Lecture, Discussion, Reference
 from categories.models import Tag, Category, ReferenceCategory
 from .admin_forms import LectureForm, CourseEnrollmentForm, ReferenceForm
 from payment.models import CourseEnrollment
+from payment.admin import CourseEnrollmentConfig
 from .admin_forms import LectureForm
 from courses.tasks import detect_and_convert_lecture_qualities, extract_and_set_lecture_audio
 
@@ -110,17 +111,21 @@ class LectureConfig(admin.ModelAdmin):
 
 
 @admin.register(CourseEnrollment, site=teacher_admin)
-class CourseEnrollmentConfig(admin.ModelAdmin):
+class CourseEnrollmentConfig(CourseEnrollmentConfig):
     model = CourseEnrollment
 
-    list_filter = ('user', 'course', 'payment_method', 'payment_type', 'date_created')
-    ordering = ('-date_created',)
-    list_display = ('user', 'course', 'payment_method', 'payment_type', 'date_created')
-    readonly_fields = ('user', 'course', 'payment_method', 'payment_type')
-
-    fieldsets = (
-        ("Enrollment Information", {'fields': ('user', 'course', 'payment_method', 'payment_type')}),
+    readonly_fields = (
+    'user',
+    'course',
+    'payment_method',
+    'payment_type',
+    'enrollment_duration',
+    'enrollment_duration_type',
+    'is_enrolled_for_life_long',
+    'enrollment_date',
+    'expiry_date'
     )
+
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)

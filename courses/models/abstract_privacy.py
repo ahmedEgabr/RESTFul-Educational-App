@@ -1,4 +1,3 @@
-from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from django.db import models
 from django.utils import timezone
@@ -82,7 +81,7 @@ class Privacy(UserActionModel, TimeStampedModel):
 
     class Meta:
         abstract = True
-        
+
     def clean_fields(self, **kwargs):
         if self.option == self.PRIVACY_CHOICES.limited_period:
             if not self.period:
