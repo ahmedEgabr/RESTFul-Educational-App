@@ -3,17 +3,10 @@ from django.db import models
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from model_utils import Choices
-from main.utility_models import UserActionModel, TimeStampedModel
+from main.utility_models import UserActionModel, TimeStampedModel, DateFormat
 
 
 class Privacy(UserActionModel, TimeStampedModel):
-
-    class DateFormat(models.TextChoices):
-        days = "days", ("Days")
-        weeks = "weeks", ("Weeks")
-        months = "months", ("Months")
-        years = "years", ("Years")
-
 
     PRIVACY_CHOICES = Choices(
         ('public', 'Public'),
@@ -130,7 +123,7 @@ class Privacy(UserActionModel, TimeStampedModel):
         if current_datetime < self.available_from:
             return False
 
-        period_type = getattr(self.DateFormat, self.period_type)
+        period_type = getattr(DateFormat, self.period_type)
         kwargs = {
         f"{period_type}": +self.period
         }

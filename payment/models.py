@@ -6,17 +6,11 @@ from django.contrib import admin
 from courses.models import Course
 from model_utils import Choices
 from django.conf import settings
-from main.utility_models import UserActionModel, TimeStampedModel
+from main.utility_models import UserActionModel, TimeStampedModel, DateFormat
 UserModel = settings.AUTH_USER_MODEL
 
 
 class CourseEnrollment(UserActionModel, TimeStampedModel):
-
-    class DateFormat(models.TextChoices):
-        days = "days", ("Days")
-        weeks = "weeks", ("Weeks")
-        months = "months", ("Months")
-        years = "years", ("Years")
 
     PAYMENT_METHODS = Choices(
         ('online', 'Online'),
@@ -61,7 +55,7 @@ class CourseEnrollment(UserActionModel, TimeStampedModel):
     def expiry_date(self):
         if not (self.enrollment_duration and self.enrollment_duration_type):
             return None
-        enrollment_duration_type = getattr(self.DateFormat, self.enrollment_duration_type)
+        enrollment_duration_type = getattr(DateFormat, self.enrollment_duration_type)
         kwargs = {
         f"{enrollment_duration_type}": +self.enrollment_duration
         }
