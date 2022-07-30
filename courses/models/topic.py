@@ -1,5 +1,5 @@
 from django.db import models
-from main.models import UserActionModel, TimeStampedModel
+from main.utility_models import UserActionModel, TimeStampedModel
 
 class Topic(UserActionModel, TimeStampedModel):
     unit = models.ForeignKey("courses.Unit", on_delete=models.CASCADE, related_name='topics')

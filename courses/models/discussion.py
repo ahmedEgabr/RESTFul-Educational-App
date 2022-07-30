@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from model_utils import Choices
-from main.models import TimeStampedModel
+from main.utility_models import TimeStampedModel
 from courses.managers import DiscussionManager
 
 

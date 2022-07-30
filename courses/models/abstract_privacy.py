@@ -3,7 +3,7 @@ from django.db import models
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from model_utils import Choices
-from main.models import UserActionModel, TimeStampedModel
+from main.utility_models import UserActionModel, TimeStampedModel
 
 
 class Privacy(UserActionModel, TimeStampedModel):

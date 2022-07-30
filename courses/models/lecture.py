@@ -3,7 +3,7 @@ import cv2
 from ckeditor.fields import RichTextField
 from django.db import models
 from django.contrib.contenttypes.models import ContentType
-from main.models import UserActionModel, TimeStampedModel
+from main.utility_models import UserActionModel, TimeStampedModel
 from courses.models.lecture_privacy import LecturePrivacy
 from courses.models.lecture_quality import LectureQuality
 from courses.models.discussion import Discussion

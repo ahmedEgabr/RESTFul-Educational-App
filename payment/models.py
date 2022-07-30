@@ -6,7 +6,7 @@ from django.contrib import admin
 from courses.models import Course
 from model_utils import Choices
 from django.conf import settings
-from main.models import UserActionModel, TimeStampedModel
+from main.utility_models import UserActionModel, TimeStampedModel
 UserModel = settings.AUTH_USER_MODEL
 
 

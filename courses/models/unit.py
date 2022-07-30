@@ -1,6 +1,6 @@
 from django.db import models
 from django.db.models import Count, Sum
-from main.models import UserActionModel, TimeStampedModel
+from main.utility_models import UserActionModel, TimeStampedModel
 from courses.models import Lecture
 
 

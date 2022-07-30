@@ -1,6 +1,6 @@
 from django.db import models
 from django.core.exceptions import ValidationError
-from .time_stamp import TimeStampedModel
+from main.utility_models import TimeStampedModel
 
 
 class AppConfiguration(TimeStampedModel):

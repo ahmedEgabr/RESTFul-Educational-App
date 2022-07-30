@@ -1,5 +1,5 @@
 from django.db import models
-from main.models import TimeStampedModel
+from main.utility_models import TimeStampedModel
 
 
 class Note(TimeStampedModel):

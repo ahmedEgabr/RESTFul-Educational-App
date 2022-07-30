@@ -1,7 +1,7 @@
 import os
 from django.db import models
 from django.core.exceptions import ValidationError
-from .time_stamp import TimeStampedModel
+from main.utility_models import TimeStampedModel
 from alteby.utils import VersionFormatValidator
 
 

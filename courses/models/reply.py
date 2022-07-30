@@ -1,5 +1,5 @@
 from django.db import models
-from main.models import UserActionModel, TimeStampedModel
+from main.utility_models import UserActionModel, TimeStampedModel
 from courses.managers import ReplyManager
 
 

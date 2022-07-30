@@ -1,6 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator
-from main.models import TimeStampedModel
+from main.utility_models import TimeStampedModel
 
 class CourseActivity(TimeStampedModel):
     user = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name='course_activity')

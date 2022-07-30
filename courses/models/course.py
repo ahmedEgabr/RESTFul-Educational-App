@@ -1,7 +1,7 @@
 from django.db import models
 from ckeditor.fields import RichTextField
 from django.contrib.contenttypes.models import ContentType
-from main.models import UserActionModel, TimeStampedModel
+from main.utility_models import UserActionModel, TimeStampedModel
 from courses.managers import CustomCourseManager
 from courses.models.discussion import Discussion
 from courses.models.lecture import Lecture
