@@ -9,6 +9,8 @@ from django.contrib.auth.models import Group
 from alteby.constants import TEACHER_GROUP, STUDENT_GROUP
 from main.models import AppConfiguration
 from users.managers import UserManager
+from django_countries.fields import CountryField
+
 
 # Account Model
 class User(AbstractBaseUser, PermissionsMixin):
@@ -26,6 +28,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     screenshots_taken = models.IntegerField(
     blank=True, null=True, default=0, validators=[MinValueValidator(0)], verbose_name="Screenshots Taken"
     )
+    country = CountryField(blank=True, blank_label='(select country)')
 
     objects = UserManager()
 
@@ -40,7 +43,7 @@ class User(AbstractBaseUser, PermissionsMixin):
             self.is_blocked = True
             self.save()
         return True
-        
+
     def activate(self):
         # Activate the User
         if not self.is_active:

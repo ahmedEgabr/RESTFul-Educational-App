@@ -1,63 +1,54 @@
 from django.contrib import admin
+from django.contrib.contenttypes.models import ContentType
+from django.shortcuts import redirect
+from django.urls import reverse
 from nested_inline.admin import NestedModelAdmin
 from django.db import transaction
 from django.db.models import Q
 from alteby.admin_sites import teacher_admin
 from courses.admin import (
-UnitTopicsInline, CourseUnitsInline, CoursePrivacyInline, CourseAttachementsInline, CoursePriceInline,
+CourseConfig, CoursePricingPlanConfig, UnitTopicsInline, CourseUnitsInline, CoursePrivacyInline, CourseAttachementsInline,
 LectureAttachementsInline, LecturePrivacyInline, LectureExternalLinkInline, ReplyInline
 )
-from courses.models import Course, Lecture, Discussion, Reference
+from courses.models import Course, Lecture, Discussion, Reference, CoursePricingPlan
 from categories.models import Tag, Category, ReferenceCategory
 from .admin_forms import LectureForm, CourseEnrollmentForm, ReferenceForm
 from payment.models import CourseEnrollment
 from payment.admin import CourseEnrollmentConfig
-from .admin_forms import LectureForm
+from .admin_forms import LectureForm, CoursePricingPlanForm
 from courses.tasks import detect_and_convert_lecture_qualities, extract_and_set_lecture_audio
 
 
+
+@admin.register(CoursePricingPlan, site=teacher_admin)
+class TeacherCoursePricingPlanConfig(CoursePricingPlanConfig):
+    form = CoursePricingPlanForm
+    
+    def get_queryset(self, request):
+        qs = super(TeacherCoursePricingPlanConfig, self).get_queryset(request)
+        return qs.select_related("course").filter(
+            Q(created_by=request.user) |
+            Q(course__created_by=request.user)
+            )
+
 @admin.register(Course, site=teacher_admin)
-class CourseConfig(NestedModelAdmin):
-    model = Course
-
-    list_filter = ('categories', 'language', 'date_created')
-    ordering = ('-date_created',)
-    list_display = ('title', 'date_created')
-    readonly_fields = ('created_by', 'updated_by')
-
-    fieldsets = (
-        ("Course Information", {
-        'fields': (
-        'image',
-        'title',
-        'description',
-        'objectives',
-        'about',
-        'language',
-        'categories',
-        'tags',
-        'featured',
-        'created_by',
-        'updated_by'
-        )}),
-    )
+class TeacherCourseConfig(CourseConfig):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         if request.user.is_superuser:
             return qs
         return qs.filter(created_by=request.user)
-
-    @transaction.atomic
-    def save_formset(self, request, form, formset, change):
-        try:
-            super().save_formset(request, form, formset, change)
-        except Exception as e:
-            print(e)
-            pass
-
-    inlines = [CoursePrivacyInline, CourseAttachementsInline, CourseUnitsInline, CoursePriceInline]
-
+    
+    def response_add(self, request, obj, post_url_continue=None):
+        url = reverse('teacher_admin:%s_%s_add' % ("courses",  "coursepricingplan"))
+        return redirect(url)
+    
+    def response_change(self, request, obj):
+        if not obj.pricing_plans.all():
+            url = reverse('teacher_admin:%s_%s_add' % ("courses",  "coursepricingplan"))
+            return redirect(url)
+        return super(CourseConfig, self).response_change(request, obj)
 
 @admin.register(Lecture, site=teacher_admin)
 class LectureConfig(admin.ModelAdmin):
@@ -121,7 +112,7 @@ class CourseEnrollmentConfig(CourseEnrollmentConfig):
     'payment_type',
     'enrollment_duration',
     'enrollment_duration_type',
-    'is_enrolled_for_life_long',
+    'lifetime_enrollment',
     'enrollment_date',
     'expiry_date'
     )

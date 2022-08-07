@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     'drf_yasg',
     'django_seed',
     'ckeditor',
+    'django_countries',
 
     # APPS
     'main',

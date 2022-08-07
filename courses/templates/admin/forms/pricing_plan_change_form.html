@@ -1,0 +1,148 @@
+{% extends "admin/change_form.html" %}
+{% load static %}
+{{inline_admin_formset}}
+{% block admin_change_form_document_ready %}
+{{ block.super }}
+<script src="{% static 'courses/js/jquery-3.3.1.min.js' %}"></script>
+<script>
+
+   django.jQuery("#id_lifetime_access").click(function(){
+      var lifeTimeAccess = $("#id_lifetime_access")
+      var duration = $(`#id_duration`)
+      var duration_type = $(`#id_duration_type`)
+
+      if(lifeTimeAccess.is(':checked')){
+         duration.parent().parent().parent().hide()
+         duration_type.attr("disabled", "disabled")
+      }else{
+         duration.parent().parent().parent().show()
+         duration.attr("disabled", null)
+         duration_type.attr("disabled", null)
+      }
+
+    })
+
+   document.addEventListener('click',function(e){
+      if(e.target){
+         var priceFormId = $(e.target).parent().parent().parent().parent().parent().parent().attr("id")
+         var selectedItem = $(e.target)
+         if(selectedItem.attr("id") == `id_${priceFormId}-select_all_countries` ){
+            countries = $(`#id_${priceFormId}-countries`)
+            if(selectedItem.is(":checked")){
+               {% comment %} countries.parent().parent().parent().hide() {% endcomment %}
+               countries.attr("disabled", "disabled")  
+            }else{
+               {% comment %} countries.parent().parent().parent().show() {% endcomment %}
+               countries.attr("disabled", null)  
+            }
+
+         }else if (selectedItem.attr("id") == `id_${priceFormId}-is_free_for_selected_countries`){
+            amount = $(`#id_${priceFormId}-amount`)
+            currency = $(`#id_${priceFormId}-currency`)
+            if(selectedItem.is(":checked")){
+               {% comment %} amount.parent().parent().parent().hide() {% endcomment %}
+               amount.attr("disabled", "disabled")   
+               currency.attr("disabled", "disabled")   
+            }else{
+               {% comment %} amount.parent().parent().parent().show() {% endcomment %}
+               amount.attr("disabled", null)
+               currency.attr("disabled", null)  
+            }
+         }
+            
+      }
+   });
+
+   function InitiateForm(){
+      var lifeTimeAccess = django.jQuery('#id_lifetime_access')
+      var duration = $(`#id_duration`)
+      var duration_type = $(`#id_duration_type`)
+
+      if(lifeTimeAccess.is(':checked')){
+         duration.parent().parent().parent().hide()
+         duration.attr("disabled", "disabled")
+         duration_type.attr("disabled", "disabled")
+      }else{
+         duration.parent().parent().parent().show()
+         duration.attr("disabled", null)
+         duration_type.attr("disabled", null)
+      }
+   }
+
+   function initiateInlinePricesForm(prices){
+      for(var i=0; i<prices.length; i++){
+         
+         countries = $(`#id_prices-${i}-countries`)
+         var selectAllCountries = $(`#id_prices-${i}-select_all_countries`)
+         if(selectAllCountries.is(":checked")){
+            countries.attr("disabled", "disabled")  
+         }else{
+            countries.attr("disabled", null)  
+         }
+
+         var isFreeforAllcountries = $(`#id_prices-${i}-is_free_for_selected_countries`)
+         amount = $(`#id_prices-${i}-amount`)
+         currency = $(`#id_prices-${i}-currency`)
+         if(isFreeforAllcountries.is(":checked")){
+            amount.attr("disabled", "disabled")   
+            currency.attr("disabled", "disabled")   
+         }else{
+            amount.attr("disabled", null)
+            currency.attr("disabled", null)  
+         }
+      }
+
+   }
+
+   django.jQuery(document).ready(function(){
+      var prices = $('.dynamic-prices')
+      InitiateForm()
+      initiateInlinePricesForm(prices)
+})
+</script>
+
+{% endblock %}
+
+
+
+{% comment %} <script>
+   var data = '{{dependant_fields}}'.replaceAll("&quot;", '"')
+   dependant_fields = JSON.parse(data)
+   
+  django.jQuery(document).ready(function(){
+         if (django.jQuery(`#id_${dependant_fields.key}`).is(':checked')) {
+
+         for(x=0; x<dependant_fields.toggle_fields.length; x++){
+            for (element=0; element<document.getElementsByClassName(`field-${dependant_fields.toggle_fields[x]}`).length; element++) {
+               document.getElementsByClassName(`field-${dependant_fields.toggle_fields[x]}`)[element].style = "display: none!important";
+            }
+         }
+        
+            hide_toggle_fields=true;
+         } else {
+
+            hide_toggle_fields=false;
+         }
+
+
+      django.jQuery(`#id_${dependant_fields.key}`).click(function(){
+          hide_toggle_fields=!hide_toggle_fields;
+          if (hide_toggle_fields) {
+               var i;
+               for(field=0; field<dependant_fields.toggle_fields.length; field++){
+                  $(`#id_${dependant_fields.toggle_fields[field]}`).val("-1")
+                  for (i = 0; i < document.getElementsByClassName(`field-${dependant_fields.toggle_fields[field]}`).length; i++) {
+                     document.getElementsByClassName(`field-${dependant_fields.toggle_fields[field]}`)[i].style ="display: none!important";
+                  }
+               }
+               
+          } else {
+               for(field=0; field<dependant_fields.toggle_fields.length; field++){
+                  for (i = 0; i < document.getElementsByClassName(`field-${dependant_fields.toggle_fields[field]}`).length; i++) {
+                     document.getElementsByClassName(`field-${dependant_fields.toggle_fields[field]}`)[i].style ="display: block!important";
+                  }
+               }
+          }
+      })
+  })
+  </script> {% endcomment %}

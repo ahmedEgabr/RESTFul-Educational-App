@@ -16,7 +16,7 @@ class CourseEnrollmentConfig(admin.ModelAdmin):
     'payment_type',
     'enrollment_duration',
     'enrollment_duration_type',
-    'is_enrolled_for_life_long',
+    'lifetime_enrollment',
     'enrollment_date',
     )
     ordering = ('-created_at',)
@@ -31,7 +31,7 @@ class CourseEnrollmentConfig(admin.ModelAdmin):
         'payment_type',
         'enrollment_duration',
         'enrollment_duration_type',
-        'is_enrolled_for_life_long',
+        'lifetime_enrollment',
         'enrollment_date',
         'expiry_date',
         )

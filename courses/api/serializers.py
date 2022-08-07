@@ -1,9 +1,10 @@
 from rest_framework import serializers
 from rest_framework.fields import CurrentUserDefault
+from django_countries.serializers import CountryFieldMixin
 from courses.models import (
 Course, Unit, Topic,
 CourseActivity,
-Lecture, LectureQuality, CoursePrivacy, CoursePrice,
+Lecture, LectureQuality, CoursePrivacy, CoursePricingPlan, CoursePlanPrice,
 LecturePrivacy,
 Quiz, QuizResult, Question, Choice,
 Attachement, Discussion, Reply, Feedback,
@@ -341,10 +342,19 @@ class UnitTopicsSerializer(serializers.ModelSerializer):
         fields = ('id', 'title', 'course', 'order', 'topics', 'lectures_duration', 'lectures_count')
 
 
-class CoursePriceSerializer(serializers.ModelSerializer):
+class CoursePlanPriceSerializer(CountryFieldMixin, serializers.ModelSerializer):
     class Meta:
-        model = CoursePrice
-        fields = '__all__'
+        model = CoursePlanPrice
+        fields = ("id", "amount", "currency")
+        
+class CoursePricingPlanSerializer(serializers.ModelSerializer):
+    price = serializers.SerializerMethodField()
+    class Meta:
+        model = CoursePricingPlan
+        fields = ("id", "duration", "duration_type", "lifetime_access", "is_free_for_all_countries", "price", "created_at")
+    
+    def get_price(self, plan):
+        return CoursePlanPriceSerializer(plan.prices.first(), many=False).data
 
 
 class CourseSerializer(serializers.ModelSerializer, QuerySerializerMixin):
@@ -362,7 +372,7 @@ class CourseSerializer(serializers.ModelSerializer, QuerySerializerMixin):
     categories = CategorySerializer(many=True, read_only=True)
     tags = TagSerializer(many=True, read_only=True)
 
-    price = serializers.SerializerMethodField()
+    pricing_plan = serializers.SerializerMethodField()
     PREFETCH_FIELDS = ['categories__course_set', 'privacy__shared_with']
 
 
@@ -371,9 +381,19 @@ class CourseSerializer(serializers.ModelSerializer, QuerySerializerMixin):
         fields = (
         'id', 'image', 'title',
         'description', 'objectives', 'about',
-        'categories', 'tags', 'price', 'language',
-        'privacy', 'quiz',
-        'units_count', 'lectures_count', 'course_duration', 'progress', 'is_enrolled', 'is_finished', 'date_created')
+        'categories', 'tags', 'language',
+        'privacy', 
+        'pricing_plan',
+        'quiz',
+        'units_count', 
+        'lectures_count', 
+        'course_duration', 
+        'progress', 
+        'is_enrolled', 
+        'is_finished', 
+        'is_free', 
+        'date_created'
+        )
 
     def get_progress(self, course):
          user = self.context.get('request', None).user
@@ -398,18 +418,12 @@ class CourseSerializer(serializers.ModelSerializer, QuerySerializerMixin):
     def get_language(self, course):
         return course.get_language_display()
 
-    def get_price(self, course):
+    def get_pricing_plan(self, course):
         request = self.context.get('request', None)
-        queryset = CoursePrice.objects
-        if request and request.country == "EG":
-            queryset = queryset.filter(currency="EGP")
-        else:
-            queryset = queryset.filter(currency="Dollar")
-
-        if not queryset:
+        pricing_plan = course.get_default_pricing_plan(request)
+        if not pricing_plan:
             return None
-
-        return CoursePriceSerializer(queryset, many=False).data
+        return CoursePricingPlanSerializer(pricing_plan, many=False).data
 
 
 class CoursesSerializer(serializers.ModelSerializer, QuerySerializerMixin):
@@ -427,7 +441,7 @@ class CoursesSerializer(serializers.ModelSerializer, QuerySerializerMixin):
     categories = CategorySerializer(many=True, read_only=True)
     tags = TagSerializer(many=True, read_only=True)
 
-    price = serializers.SerializerMethodField()
+    default_plan = serializers.SerializerMethodField()
 
     PREFETCH_FIELDS = ['categories__course_set', 'privacy__shared_with']
 
@@ -437,9 +451,19 @@ class CoursesSerializer(serializers.ModelSerializer, QuerySerializerMixin):
         fields = (
         'id', 'image', 'title',
         'description', 'objectives', 'about',
-        'categories', 'tags', 'price', 'language',
-        'privacy', 'quiz',
-        'units_count', 'lectures_count', 'course_duration', 'progress', 'is_enrolled', 'is_finished', 'date_created')
+        'categories', 'tags', 'language',
+        'privacy', 
+        'default_plan',
+        'quiz',
+        'units_count', 
+        'lectures_count', 
+        'course_duration', 
+        'progress', 
+        'is_enrolled', 
+        'is_finished', 
+        'is_free', 
+        'date_created'
+        )
 
     def get_progress(self, course):
          user = self.context.get('request', None).user
@@ -464,17 +488,10 @@ class CoursesSerializer(serializers.ModelSerializer, QuerySerializerMixin):
     def get_language(self, course):
         return course.get_language_display()
 
-    def get_price(self, course):
+    def get_default_plan(self, course):
         request = self.context.get('request', None)
-        if request and request.country == "EG":
-            queryset = course.prices.filter(currency="egp")
-        else:
-            queryset = course.prices.filter(currency="dollar")
-
-        if not queryset:
-            return None
-
-        return CoursePriceSerializer(queryset.first(), many=False).data
+        pricing_plan = course.get_default_pricing_plan(request)
+        return CoursePricingPlanSerializer(pricing_plan, many=False).data
 
 
 class ReplySerializer(serializers.ModelSerializer):

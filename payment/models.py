@@ -28,7 +28,7 @@ class CourseEnrollment(UserActionModel, TimeStampedModel):
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS, default=PAYMENT_METHODS.online)
     payment_type = models.CharField(max_length=20, choices=PAYMENT_TYPES, default=PAYMENT_TYPES.free)
 
-    is_enrolled_for_life_long = models.BooleanField(default=False)
+    lifetime_enrollment = models.BooleanField(default=False)
     enrollment_duration = models.IntegerField(
     blank=True,
     null=True,
@@ -63,7 +63,7 @@ class CourseEnrollment(UserActionModel, TimeStampedModel):
 
     @admin.display(boolean=True)
     def is_expired(self):
-        if self.is_enrolled_for_life_long:
+        if self.lifetime_enrollment:
             return False
 
         if self.enrollment_duration and self.enrollment_duration_type:

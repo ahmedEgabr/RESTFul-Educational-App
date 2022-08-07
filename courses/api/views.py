@@ -12,7 +12,7 @@ TopicDetailSerializer, UnitTopicsSerializer, DemoLectureSerializer,
 FullLectureSerializer, QuizSerializer,
 QuizResultSerializer, AttachementSerializer,
 DiscussionSerializer, FeedbackSerializer,
-QuestionSerializer, LectureExternalLinkSerializer, ReferenceSerializer
+QuestionSerializer, LectureExternalLinkSerializer, ReferenceSerializer, CoursePricingPlanSerializer
 )
 from courses.models import Course, Unit, Topic, CourseActivity, Lecture, Discussion, Feedback, Quiz, Question, Choice, QuizResult
 from playlists.models import WatchHistory
@@ -757,6 +757,23 @@ class TrackCourseActivity(APIView):
         response = {
             'status': 'success',
             'message': 'Checked!',
-            'success_description': 'This Lecture Marked ad read.'
+            'success_description': 'This Lecture Marked as read.'
         }
         return Response(response, status=status.HTTP_201_CREATED)
+
+class CoursePricingPlanList(APIView, PageNumberPagination):
+    
+    def get(self, request, course_id):
+        
+        filter_kwargs = {
+        'id': course_id,
+        }
+        course, found, error = utils.get_object(model=Course, filter_kwargs=filter_kwargs)
+        if not found:
+            return Response(error, status=status.HTTP_404_NOT_FOUND)
+        
+        pricing_plans = course.get_pricing_plans(request)
+        pricing_plans = self.paginate_queryset(pricing_plans, request, view=self)
+        serializer = CoursePricingPlanSerializer(pricing_plans, many=True, context={'request': request})
+        return self.get_paginated_response(serializer.data)
+    

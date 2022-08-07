@@ -9,15 +9,12 @@ from courses.models.topic import Topic
 from courses.models.course_privacy import CoursePrivacy
 from courses.models.activity import CourseActivity
 from courses.models.reference import Reference
+from courses.models.course_pricing_plan import CoursePricingPlan
+from courses.models.course_plan_price import CoursePlanPrice
 from users.models import User, Teacher
-
+from main.utility_models import Languages
 
 class Course(UserActionModel):
-
-    class Languages(models.TextChoices):
-        arabic = "arabic", ("Arabic")
-        english = "english", ("English")
-        mixed = "mixed", ("Mixed")
 
     title = models.CharField(max_length=100)
     description = RichTextField()
@@ -30,6 +27,8 @@ class Course(UserActionModel):
     image = models.ImageField(upload_to="courses/images", blank=True)
     tags = models.ManyToManyField("categories.Tag", blank=True)
     language = models.CharField(choices=Languages.choices, default=Languages.arabic, max_length=20)
+    is_free = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=False)
 
     objects = CustomCourseManager()
 
@@ -107,3 +106,91 @@ class Course(UserActionModel):
     @property
     def discussions(self):
         return Discussion.objects.filter(object_type=ContentType.objects.get_for_model(self).id, status='approved')
+
+    @property
+    def has_pricing_plans(self):
+        return self.pricing_plans.exists()
+
+    def create_default_pricing_plan(self):
+        return CoursePricingPlan.create_default_pricing_plan(course=self)
+    
+    def get_pricing_plans(self, request):
+
+        queryset = self.pricing_plans
+        if not queryset.exists():
+            return []
+        
+        country_regex = u'^{0},|,{0},|,{0}$|^{0}$'.format(request.country)
+        
+        prices_filter_queryset = CoursePlanPrice.objects.filter(
+            models.Q(countries__regex=country_regex) |
+            models.Q(select_all_countries=True) | 
+            (models.Q(is_free_for_selected_countries=True) & models.Q(countries__regex=country_regex)),
+            plan__course=self,
+            is_active=True
+            ).order_by("amount")
+        
+        default_prices_filter = CoursePlanPrice.objects.filter(
+            plan__course=self,
+            is_default=True, 
+            is_active=True
+            ) 
+        
+        queryset = queryset.prefetch_related(
+            models.Prefetch("prices", queryset=prices_filter_queryset if prices_filter_queryset else default_prices_filter)
+        )
+        
+        pricing_plans = queryset.filter(
+            models.Q(is_free_for_all_countries=True) | (
+                models.Q(prices__countries__regex=country_regex) & 
+                models.Q(prices__is_free_for_selected_countries=True) &
+                models.Q(prices__is_active=True) |
+                models.Q(prices__countries__regex=country_regex)
+            ),
+            is_active=True,
+            is_default=False,
+            ).distinct()
+        if not pricing_plans:
+            pricing_plans = queryset.filter(is_default=True, is_active=True) 
+        return pricing_plans
+    
+    def get_default_pricing_plan(self, request):
+        
+        queryset = self.pricing_plans
+        if not queryset.exists():
+            return None
+        
+        country_regex = u'^{0},|,{0},|,{0}$|^{0}$'.format(request.country)
+        
+        prices_filter_queryset = CoursePlanPrice.objects.filter(
+            models.Q(countries__regex=country_regex) |
+            models.Q(select_all_countries=True) | 
+            (models.Q(is_free_for_selected_countries=True) & models.Q(countries__regex=country_regex)),
+            plan__course=self,
+            is_active=True
+            ).order_by("amount")
+
+        default_prices_filter = CoursePlanPrice.objects.filter(
+            plan__course=self,
+            is_default=True,
+            is_active=True
+            ) 
+        
+        queryset = queryset.prefetch_related(
+            models.Prefetch("prices", queryset=prices_filter_queryset if prices_filter_queryset else  default_prices_filter)
+        )
+        
+        # Check for free plans  available for request country
+        pricing_plan = queryset.filter(
+            models.Q(is_free_for_all_countries=True) | (
+                models.Q(prices__countries__regex=country_regex) & 
+                models.Q(prices__is_free_for_selected_countries=True) &
+                models.Q(prices__is_active=True) |
+                models.Q(prices__countries__regex=country_regex)
+            ),
+            is_active=True
+            ).first()
+        
+        if not pricing_plan:
+            pricing_plan = queryset.filter(is_active=True, is_default=True).first()
+        return pricing_plan

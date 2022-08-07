@@ -3,7 +3,7 @@ from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
 from django.conf import settings
 from django.db import transaction
-from .models import QuizAttempt, QuizResult, Lecture, LectureQuality
+from .models import QuizAttempt, QuizResult, Lecture, LectureQuality, Course, CoursePricingPlan, CoursePlanPrice
 from moviepy.editor import VideoFileClip, AudioFileClip
 
 def atomic_post_save(sender, instance, **kwargs):
@@ -13,6 +13,69 @@ def atomic_post_save(sender, instance, **kwargs):
 post_save.connect(atomic_post_save)
 
 
+@receiver(pre_save, sender=CoursePricingPlan)
+def pre_save_course_pricing_plan(sender, instance, *args, **kwargs):
+    
+    if instance.lifetime_access:
+        instance.durantion = None
+        instance.duration_type = None
+        
+    # set the first plan as a default
+    course_has_plans = sender.objects.filter(
+    course=instance.course, is_active=True
+    ).exists()
+    if not course_has_plans:
+        instance.is_default = True
+
+        # Update course pricing
+        instance.course.is_free = False
+        instance.course.save()
+
+# @receiver(post_save, sender=CoursePricingPlan)
+# def post_save_course_pricing_plan(sender, instance=None, created=False, **kwargs):
+#     prices = instance.prices.filter(is_active=True)
+#     if prices.count() == 1:
+#         price = prices.first()
+#         price.is_default = True
+#         price.save()
+        
+        
+@receiver(pre_save, sender=CoursePlanPrice)
+def pre_save_course_plan_prices(sender, instance, *args, **kwargs):
+    if instance.select_all_countries:
+        instance.countries = []
+    if instance.is_free_for_selected_countries:
+        instance.amount = 0
+        instance.currency = None
+    
+@receiver(post_save, sender=CoursePricingPlan)
+def deactivate_plan_prices(sender, instance=None, created=False, **kwargs):
+    if instance.is_free_for_all_countries:
+        instance.prices.update(is_active=False)
+        
+@receiver(post_delete, sender=CoursePricingPlan)
+def post_delete_course_pricing_plan(sender, instance, **kwargs):
+
+    course_has_plans = sender.objects.filter(
+    course=instance.course, is_active=True
+    ).exists()
+    if not course_has_plans:
+        # Update course pricing
+        instance.course.is_free = True
+        instance.course.save()
+
+@receiver(post_save, sender=CoursePlanPrice)
+def deactivate_plan_prices(sender, instance=None, created=False, **kwargs):
+    if instance.select_all_countries:
+        instance.plan.prices.exclude(id=instance.id).update(is_active=False)
+
+@receiver(post_delete, sender=CoursePlanPrice)
+def post_delete_plan_price(sender, instance, **kwargs):
+   if instance.plan.prices.filter(is_active=True).count() == 1:
+       price = instance.plan.prices.first()
+       price.is_default = True
+       price.save()
+        
 @receiver(post_save, sender=QuizResult)
 def add_quiz_attempt(sender, instance=None, created=False, **kwargs):
     if created:
