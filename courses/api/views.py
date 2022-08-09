@@ -435,7 +435,7 @@ class LectureQuizAnswer(APIView):
             except Choice.DoesNotExist:
                 return Response(general_utils.error('not_found'), status=status.HTTP_404_NOT_FOUND)
 
-            answer = QuestionResult(user=request.user, quiz=quiz, question=question, selected_choice=selected_choice, is_correct=selected_choice.is_correct)
+            answer = QuestionResult(user=request.user, quiz=quiz, question=question, selected_choice=selected_choice)
             answers_objs.append(answer)
 
         if not answers_objs:
