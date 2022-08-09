@@ -32,7 +32,6 @@ class LectureForm(forms.ModelForm):
         'audio',
         'script',
         'teacher',
-        'quiz',
         'reference_category',
         'references',
         'order'

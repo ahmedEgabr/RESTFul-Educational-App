@@ -6,7 +6,7 @@ Course, Unit, Topic,
 CourseActivity,
 Lecture, LectureQuality, CoursePrivacy, CoursePricingPlan, CoursePlanPrice,
 LecturePrivacy,
-Quiz, QuizResult, Question, Choice,
+Quiz,
 Attachement, Discussion, Reply, Feedback,
 LectureExternalLink, Reference
 )
@@ -15,7 +15,7 @@ from categories.api.serializers import CategorySerializer, TagSerializer
 from django.db.models import Sum
 from payment.models import CourseEnrollment
 from users.api.serializers import TeacherSerializer, BasicUserSerializer
-
+from question_banks.models import QuestionResult, Question, Choice
 
 class LectureIndexSerialiser(serializers.ModelSerializer):
 
@@ -85,13 +85,13 @@ class ReferenceSerializer(serializers.ModelSerializer):
 class ChoiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Choice
-        fields = ('id', 'choice', 'is_correct')
+        fields = ('id', 'choice', 'is_correct', 'explanation', 'image')
 
 class QuestionSerializer(serializers.ModelSerializer):
     choices = ChoiceSerializer(many=True, read_only=True)
     class Meta:
         model = Question
-        fields = ('id', 'question_title', 'choices')
+        fields = ('id', 'title', 'choices', 'extra_info', 'image')
 
 class QuizSerializer(serializers.ModelSerializer):
     questions = QuestionSerializer(many=True, read_only=True)
@@ -100,11 +100,11 @@ class QuizSerializer(serializers.ModelSerializer):
         model = Quiz
         fields = ('id', 'name', 'description', 'questions')
 
-class BaseQuizResultSerializer(serializers.ModelSerializer):
+class BaseQuestionResultSerializer(serializers.ModelSerializer):
     question = QuestionSerializer(many=False, read_only=True)
     selected_choice = ChoiceSerializer(many=False, read_only=True)
     class Meta:
-        model = QuizResult
+        model = QuestionResult
         fields = ('id', 'question', 'selected_choice', 'is_correct')
 
 class QuizResultSerializer(serializers.ModelSerializer):
@@ -114,22 +114,30 @@ class QuizResultSerializer(serializers.ModelSerializer):
     score = serializers.SerializerMethodField('get_score')
     class Meta:
         model = Quiz
-        fields = '__all__'
+        fields = ("id", "name", "description", "lecture", "questions_count", "created_at", "result", "score", "selected_choice")
 
+    num_of_questions = 0
     num_of_right_answers = 0
     def get_result(self, quiz):
         user = self.context.get('request', None).user
         # Must select distinct, but it is not supported by SQLite
-        quiz_answers = QuizResult.objects.select_related('question', 'selected_choice').prefetch_related('question__choices').filter(user=user, quiz=quiz)
+        quiz_answers = QuestionResult.objects.select_related(
+            'question', 'selected_choice'
+            ).prefetch_related(
+                'question__choices'
+                ).filter(
+                    user=user, quiz=quiz
+                    )
+                
         self.num_of_right_answers = quiz_answers.filter(is_correct=True).count()
-        return BaseQuizResultSerializer(quiz_answers, many=True, read_only=True).data
+        return BaseQuestionResultSerializer(quiz_answers, many=True, read_only=True).data
 
     def get_score(self, quiz):
-        return self.num_of_right_answers
-
+        return (self.num_of_right_answers/self.num_of_questions)*100
 
     def get_questions_count(self, quiz):
-        return quiz.questions.count()
+        self.num_of_questions = quiz.questions.count()
+        return self.num_of_questions
 
 class CoursePrivacySerializer(serializers.ModelSerializer):
     class Meta:
@@ -384,7 +392,6 @@ class CourseSerializer(serializers.ModelSerializer, QuerySerializerMixin):
         'categories', 'tags', 'language',
         'privacy', 
         'pricing_plan',
-        'quiz',
         'units_count', 
         'lectures_count', 
         'course_duration', 
@@ -454,7 +461,6 @@ class CoursesSerializer(serializers.ModelSerializer, QuerySerializerMixin):
         'categories', 'tags', 'language',
         'privacy', 
         'default_plan',
-        'quiz',
         'units_count', 
         'lectures_count', 
         'course_duration', 

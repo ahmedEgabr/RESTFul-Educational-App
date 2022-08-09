@@ -22,7 +22,6 @@ class Course(UserActionModel):
     about = models.TextField(blank=True, null=True)
     categories = models.ManyToManyField("categories.Category", blank=True)
     date_created = models.DateTimeField(auto_now_add=True)
-    quiz = models.OneToOneField("courses.Quiz", on_delete=models.CASCADE, blank=True, null=True)
     featured = models.BooleanField(default=False)
     image = models.ImageField(upload_to="courses/images", blank=True)
     tags = models.ManyToManyField("categories.Tag", blank=True)

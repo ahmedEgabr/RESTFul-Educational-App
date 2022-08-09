@@ -86,9 +86,9 @@ if settings.DEBUG:
     ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 
-admin.site.index_title = settings.SITE_INDEX_TITLE
-admin.site.site_title = settings.SITE_TITLE
-admin.site.site_header = settings.SITE_HEADER
+main_admin.index_title = settings.SITE_INDEX_TITLE
+main_admin.site_title = settings.SITE_TITLE
+main_admin.site_header = settings.SITE_HEADER
 
 
 # Errors Handlers

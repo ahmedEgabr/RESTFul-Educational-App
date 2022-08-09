@@ -3,7 +3,7 @@ from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
 from django.conf import settings
 from django.db import transaction
-from .models import QuizAttempt, QuizResult, Lecture, LectureQuality, Course, CoursePricingPlan, CoursePlanPrice
+from .models import QuizAttempt, Lecture, LectureQuality, Course, CoursePricingPlan, CoursePlanPrice
 from moviepy.editor import VideoFileClip, AudioFileClip
 
 def atomic_post_save(sender, instance, **kwargs):
@@ -76,11 +76,6 @@ def post_delete_plan_price(sender, instance, **kwargs):
        price.is_default = True
        price.save()
         
-@receiver(post_save, sender=QuizResult)
-def add_quiz_attempt(sender, instance=None, created=False, **kwargs):
-    if created:
-        if instance.question == instance.quiz.questions.last():
-            QuizAttempt.objects.create(user=instance.user, quiz=instance.quiz)
 
 # @receiver(post_save, sender=Lecture)
 # def calculate_duration(sender, instance=None, created=False, **kwargs):

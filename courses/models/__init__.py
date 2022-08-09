@@ -10,7 +10,7 @@ from .abstract_attachement import Attachement
 from .course_attachement import CourseAttachement
 from .lecture_attachement import LectureAttachement
 from .activity import CourseActivity
-from .quiz_models import Quiz, Question, Choice, QuizResult, QuizAttempt
+from .quiz_models import Quiz, QuizAttempt
 from .discussion import Discussion
 from .feedback import Feedback
 from .correct_info import CorrectInfo

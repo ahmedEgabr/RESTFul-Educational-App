@@ -1,5 +1,6 @@
 from django.contrib import admin, messages
 from django.shortcuts import redirect
+from django.urls import reverse
 from django import forms
 from alteby.admin_sites import main_admin
 from django.db import transaction
@@ -20,9 +21,6 @@ CorrectInfo,
 Report,
 Feedback,
 Quiz,
-Question,
-Choice,
-QuizResult,
 QuizAttempt,
 Unit,
 Topic,
@@ -34,7 +32,6 @@ Privacy
 )
 from .tasks import detect_and_convert_lecture_qualities, extract_and_set_lecture_audio
 
-main_admin.register(QuizResult)
 main_admin.register(QuizAttempt)
 main_admin.register(Unit)
 main_admin.register(Topic)
@@ -277,6 +274,19 @@ class LectureAttachementsInline(admin.StackedInline):
         qs = super(LectureAttachementsInline, self).get_queryset(request)
         return qs.select_related("lecture")
 
+
+class LectureQuizInline(admin.StackedInline):
+    model = Quiz
+    exclude = ['created_by', 'updated_by']
+    can_delete = True
+    verbose_name_plural = 'Quiz'
+    fk_name = 'lecture'
+    max_num = 1
+
+    def get_queryset(self, request):
+        qs = super(LectureQuizInline, self).get_queryset(request)
+        return qs.select_related("lecture")
+    
 class LecturePrivacyInline(admin.StackedInline):
     model = LecturePrivacy
     fields = (
@@ -327,7 +337,7 @@ class LectureConfig(admin.ModelAdmin):
     list_display = ('topic', 'title')
     readonly_fields = ('duration', 'audio', 'created_by', 'updated_by')
 
-    inlines = [LecturePrivacyInline, LectureAttachementsInline, LectureExternalLinkInline]
+    inlines = [LecturePrivacyInline, LectureAttachementsInline, LectureExternalLinkInline, LectureQuizInline]
 
     def save_model(self, request, new_lecture, form, change):
         # Update lecture duration
@@ -409,25 +419,3 @@ class FeedbackConfig(NestedModelAdmin):
     fieldsets = (
         ("Feedback Information", {'fields': ('user', 'course', 'rating', 'description')}),
     )
-
-
-class ChoiceInline(NestedStackedInline):
-    model = Choice
-    can_delete = True
-    verbose_name_plural = 'Choices'
-    fk_name = 'question'
-
-
-class QuestionInline(NestedStackedInline):
-    model = Question
-    extra = 1
-    can_delete = True
-    verbose_name_plural = 'Questions'
-    fk_name = 'quiz'
-    inlines = [ChoiceInline]
-
-
-@admin.register(Quiz, site=main_admin)
-class QuizConfig(NestedModelAdmin):
-    model = Quiz
-    inlines = [QuestionInline]

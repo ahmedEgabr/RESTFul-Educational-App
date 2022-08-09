@@ -14,7 +14,8 @@ QuizResultSerializer, AttachementSerializer,
 DiscussionSerializer, FeedbackSerializer,
 QuestionSerializer, LectureExternalLinkSerializer, ReferenceSerializer, CoursePricingPlanSerializer
 )
-from courses.models import Course, Unit, Topic, CourseActivity, Lecture, Discussion, Feedback, Quiz, Question, Choice, QuizResult
+from courses.models import Course, Unit, Topic, CourseActivity, Lecture, Discussion, Feedback, Quiz
+from question_banks.models import Question, Choice, QuestionResult
 from playlists.models import WatchHistory
 from functools import reduce
 import operator
@@ -104,7 +105,7 @@ class LectureDetail(APIView):
         if lecture.is_allowed_to_access_lecture(request.user):
             serializer = FullLectureSerializer(lecture, many=False, context={'request': request})
             watch_history, created = WatchHistory.objects.get_or_create(user=request.user)
-            watch_history.add_lecture(lecture)
+            watch_history.add(lecture)
             return Response(serializer.data)
 
         return Response(general_utils.error('access_denied'), status=status.HTTP_403_FORBIDDEN)
@@ -338,7 +339,7 @@ class QuizDetail(APIView):
 
             # Delete previous result of this quiz
             if retake:
-                QuizResult.objects.filter(user=request.user, quiz=lecture.quiz).delete()
+                QuestionResult.objects.filter(user=request.user, quiz=lecture.quiz).delete()
             return Response(serializer.data)
 
         else:
@@ -355,7 +356,7 @@ class QuizDetail(APIView):
 
             # Delete previous result of this quiz
             if retake:
-                QuizResult.objects.filter(user=request.user, quiz=course.quiz).delete()
+                QuestionResult.objects.filter(user=request.user, quiz=course.quiz).delete()
 
             return Response(serializer.data)
 
@@ -389,13 +390,13 @@ class CourseQuizAnswer(APIView):
             except Choice.DoesNotExist:
                 return Response(general_utils.error('not_found'), status=status.HTTP_404_NOT_FOUND)
 
-            answer = QuizResult(user=request.user, quiz=quiz, question=question, selected_choice=selected_choice, is_correct=selected_choice.is_correct)
+            answer = QuestionResult(user=request.user, quiz=quiz, question=question, selected_choice=selected_choice, is_correct=selected_choice.is_correct)
             answers_objs.append(answer)
 
         if not answers_objs:
             return Response(general_utils.error('empty_quiz_answers'), status=status.HTTP_400_BAD_REQUEST)
 
-        QuizResult.objects.bulk_create(answers_objs)
+        QuestionResult.objects.bulk_create(answers_objs)
         return Response(general_utils.success('quiz_answer_submitted'), status=status.HTTP_201_CREATED)
 
 class LectureQuizAnswer(APIView):
@@ -434,13 +435,13 @@ class LectureQuizAnswer(APIView):
             except Choice.DoesNotExist:
                 return Response(general_utils.error('not_found'), status=status.HTTP_404_NOT_FOUND)
 
-            answer = QuizResult(user=request.user, quiz=quiz, question=question, selected_choice=selected_choice, is_correct=selected_choice.is_correct)
+            answer = QuestionResult(user=request.user, quiz=quiz, question=question, selected_choice=selected_choice, is_correct=selected_choice.is_correct)
             answers_objs.append(answer)
 
         if not answers_objs:
             return Response(general_utils.error('empty_quiz_answers'), status=status.HTTP_400_BAD_REQUEST)
 
-        QuizResult.objects.bulk_create(answers_objs)
+        QuestionResult.objects.bulk_create(answers_objs)
         return Response(general_utils.success('quiz_answer_submitted'), status=status.HTTP_201_CREATED)
 
 class CourseQuizResult(APIView):
@@ -696,7 +697,7 @@ class CourseFeedbacks(APIView, PageNumberPagination):
         if not found:
             return Response(error, status=status.HTTP_404_NOT_FOUND)
 
-        if utils.is_enrolled(request.user, course):
+        if course.is_allowed_to_access_course(request.user):
             rating = request.data['rating']
             description = request.data['description']
             try:
@@ -728,7 +729,7 @@ class TrackCourseActivity(APIView):
         if not found:
             return Response(error, status=status.HTTP_404_NOT_FOUND)
 
-        if not utils.is_enrolled(request.user, lecture.topic.unit.course):
+        if not lecture.is_allowed_to_access_lecture(request.user):
             return Response(general_utils.error('access_denied'), status=status.HTTP_403_FORBIDDEN)
 
         lecture_activity, created = CourseActivity.objects.get_or_create(user=request.user, course=lecture.topic.unit.course, lecture=lecture)

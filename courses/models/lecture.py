@@ -20,7 +20,6 @@ class Lecture(UserActionModel, TimeStampedModel):
     script = RichTextField(blank=True, null=True, max_length=100)
     duration = models.FloatField(blank=True, default=0)
     order = models.IntegerField()
-    quiz = models.OneToOneField("courses.Quiz", on_delete=models.CASCADE, blank=True, null=True)
     references = models.ManyToManyField("courses.Reference", blank=True)
     teacher = models.ForeignKey("users.Teacher", blank=True, null=True, on_delete=models.CASCADE, related_name="contributed_lectures")
     date_created = models.DateTimeField(auto_now_add=True)

@@ -70,7 +70,8 @@ INSTALLED_APPS = [
     'courses',
     'payment',
     'playlists',
-    'categories'
+    'categories',
+    'question_banks'
 ]
 
 # ADMIN_REORDER = (
