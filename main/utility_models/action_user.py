@@ -8,8 +8,8 @@ class UserActionModel(models.Model):
     you can get all the items, with Item being the model name, created or updated
     by user using user.created_(classname)s() or user.updated_(classname)s()
     """
-    created_by = CurrentUserField(related_name='created_%(class)ss')
-    updated_by = CurrentUserField(on_update=True, related_name='updated_%(class)ss')
+    created_by = CurrentUserField(blank=True, related_name='created_%(class)ss')
+    updated_by = CurrentUserField(blank=True, on_update=True, related_name='updated_%(class)ss')
 
     class Meta:
         abstract = True
