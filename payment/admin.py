@@ -8,6 +8,7 @@ from .models import CourseEnrollment
 @admin.register(CourseEnrollment, site=main_admin)
 class CourseEnrollmentConfig(admin.ModelAdmin):
     model = CourseEnrollment
+    change_form_template = 'admin/forms/course_enrollment_change_form.html'
 
     list_filter = (
     'user',
@@ -34,12 +35,14 @@ class CourseEnrollmentConfig(admin.ModelAdmin):
         'lifetime_enrollment',
         'enrollment_date',
         'expiry_date',
+        'force_expiry',
+        'is_active'
         )
         }),
     )
 
     @staticmethod
     def expiry_date(object):
-        if not object.expiry_date:
+        if not object.calculate_expiry_date:
             return None
-        return date_format(timezone.localtime(object.expiry_date), 'DATETIME_FORMAT')
+        return date_format(timezone.localtime(object.calculate_expiry_date), 'DATETIME_FORMAT')

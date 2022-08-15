@@ -17,6 +17,30 @@ from payment.models import CourseEnrollment
 from users.api.serializers import TeacherSerializer, BasicUserSerializer
 from question_banks.models import QuestionResult, Question, Choice
 
+
+class CoursePathSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Course
+        fields = ('id', 'title')
+        
+class UnitPathSerializer(serializers.ModelSerializer):
+    course = CoursePathSerializer(many=False, read_only=True)
+    class Meta:
+        model = Lecture
+        fields = ('id', 'title', 'course')
+        
+class TopicPathSerializer(serializers.ModelSerializer):
+    unit = UnitPathSerializer(many=False, read_only=True)
+    class Meta:
+        model = Lecture
+        fields = ('id', 'title', 'unit')
+        
+class LecturePathSerializer(serializers.ModelSerializer):
+    topic = TopicPathSerializer(many=False, read_only=True)
+    class Meta:
+        model = Lecture
+        fields = ('id', 'title', 'topic')
+        
 class LectureIndexSerialiser(serializers.ModelSerializer):
 
     can_access = serializers.SerializerMethodField()
@@ -147,11 +171,11 @@ class CoursePrivacySerializer(serializers.ModelSerializer):
         "course",
         "option",
         "available_from",
-        "is_available_during_limited_period",
-        "period",
-        "period_type",
-        "enrollment_period",
-        "enrollment_period_type",
+        "is_available_during_limited_duration",
+        "duration",
+        "duration_type",
+        "enrollment_duration",
+        "enrollment_duration_type",
         "is_downloadable",
         "is_downloadable_for_enrolled_users_only",
         "is_quiz_available",
@@ -169,11 +193,11 @@ class LecturePrivacySerializer(serializers.ModelSerializer):
         "lecture",
         "option",
         # "available_from",
-        # "is_available_during_limited_period",
-        # "period",
-        # "period_type",
-        # "enrollment_period",
-        # "enrollment_period_type",
+        # "is_available_during_limited_duration",
+        # "duration",
+        # "durationtype",
+        # "enrollment_duration",
+        # "enrollment_duration_type",
         "is_downloadable",
         "is_downloadable_for_enrolled_users_only",
         "is_quiz_available",
@@ -196,6 +220,7 @@ class DemoLectureSerializer(serializers.ModelSerializer):
     has_video = serializers.SerializerMethodField()
     has_audio = serializers.SerializerMethodField()
     has_script = serializers.SerializerMethodField()
+    path = serializers.SerializerMethodField()
 
     class Meta:
         model = Lecture
@@ -206,6 +231,7 @@ class DemoLectureSerializer(serializers.ModelSerializer):
         'objectives',
         'order',
         'topic',
+        'path',
         'privacy',
         'teacher',
         'duration',
@@ -229,6 +255,11 @@ class DemoLectureSerializer(serializers.ModelSerializer):
 
     def get_has_script(self, lecture):
         return True if lecture.script else False
+    
+    from collections import OrderedDict
+
+    def get_path(self, lecture):
+        return LecturePathSerializer(lecture).data
 
 class LectureQualitySerializer(serializers.ModelSerializer):
     quality = serializers.SerializerMethodField()
@@ -249,6 +280,7 @@ class LectureExternalLinkSerializer(serializers.ModelSerializer):
 class FullLectureSerializer(DemoLectureSerializer):
     teacher = TeacherSerializer(many=False, read_only=True)
     qualities = LectureQualitySerializer(many=True, read_only=True)
+    path = serializers.SerializerMethodField()
     class Meta:
         model = Lecture
         fields = (
@@ -266,7 +298,8 @@ class FullLectureSerializer(DemoLectureSerializer):
         'left_off_at',
         'viewed',
         'order',
-        'privacy'
+        'privacy',
+        'path'
         )
 
     def convert_duration(self, lecture):
@@ -274,6 +307,9 @@ class FullLectureSerializer(DemoLectureSerializer):
 
     def get_course_id(self, lecture):
         return lecture.course.id
+    
+    def get_path(self, lecture):
+        return LecturePathSerializer(lecture).data
 
 class QuerySerializerMixin(object):
     PREFETCH_FIELDS = [] # Here is for M2M fields
@@ -293,10 +329,13 @@ class TopicsListSerializer(serializers.ModelSerializer):
     lectures_count = serializers.IntegerField()
     lectures_duration = serializers.FloatField()
     is_finished = serializers.SerializerMethodField('get_activity_status')
+    can_access = serializers.SerializerMethodField()
+    progress = serializers.SerializerMethodField()
+    path = serializers.SerializerMethodField()
 
     class Meta:
         model = Topic
-        fields =('id', 'title', 'unit', 'lectures_count', 'lectures_duration', 'is_finished', 'order')
+        fields =('id', 'title', 'unit', 'path', 'lectures_count', 'lectures_duration', 'progress', 'is_finished', 'order', 'can_access')
 
     def get_activity_status(self, topic):
         if not topic.lectures_count:
@@ -305,16 +344,27 @@ class TopicsListSerializer(serializers.ModelSerializer):
 
     def format_lectures_duration(self, topic):
         return seconds_to_duration(topic.lectures_duration)
+    
+    def get_can_access(self, topic):
+        user = self.context.get("request", None).user
+        return topic.unit.course.is_allowed_to_access_course(user=user)
+    
+    def get_path(self, topic):
+        return TopicPathSerializer(topic).data
+    
+    def get_progress(self, topic):
+        return round(topic.num_of_lectures_viewed/topic.lectures_count * 100, 2)
 
 
 class TopicDetailSerializer(serializers.ModelSerializer):
     lectures_count = serializers.IntegerField()
     lectures_duration = serializers.FloatField()
+    progress = serializers.SerializerMethodField()
     is_finished = serializers.SerializerMethodField('get_activity_status')
 
     class Meta:
         model = Topic
-        fields =('id', 'title', 'unit', 'lectures_count', 'lectures_duration', 'is_finished', 'order')
+        fields =('id', 'title', 'unit', 'lectures_count', 'lectures_duration', 'progress', 'is_finished', 'order')
 
     def get_activity_status(self, topic):
         if not topic.lectures_count:
@@ -323,15 +373,21 @@ class TopicDetailSerializer(serializers.ModelSerializer):
 
     def format_lectures_duration(self, topic):
         return seconds_to_duration(topic.lectures_duration)
+    
+    def get_progress(self, topic):
+        return round(topic.num_of_lectures_viewed/topic.lectures_count * 100, 2)
 
 class UnitSerializer(serializers.ModelSerializer):
     lectures_count = serializers.IntegerField()
     lectures_duration = serializers.FloatField()
     is_finished = serializers.SerializerMethodField('get_activity_status')
+    can_access = serializers.SerializerMethodField()
+    path = serializers.SerializerMethodField()
+    progress = serializers.SerializerMethodField()
 
     class Meta:
         model = Unit
-        fields = ('id', 'title', 'course', 'order', 'lectures_duration', 'lectures_count', 'is_finished')
+        fields = ('id', 'title', 'course', 'order', 'path', 'lectures_duration', 'lectures_count', 'progress', 'is_finished', 'can_access')
 
     def get_activity_status(self, unit):
         if not unit.lectures_count:
@@ -340,16 +396,26 @@ class UnitSerializer(serializers.ModelSerializer):
 
     def format_lectures_duration(self, unit):
         return seconds_to_duration(unit.lectures_duration)
+    
+    def get_can_access(self, unit):
+        user = self.context.get("request", None).user
+        return unit.course.is_allowed_to_access_course(user=user)
+    
+    def get_progress(self, unit):
+        return round(unit.num_of_lectures_viewed/unit.lectures_count * 100, 2)
+     
+    def get_path(self, unit):
+        return UnitPathSerializer(unit).data
 
 class UnitTopicsSerializer(serializers.ModelSerializer):
     topics = TopicsListSerializer(many=True, read_only=True)
     lectures_count = serializers.IntegerField(source='get_lectures_count')
     lectures_duration = serializers.CharField(source='get_lectures_duration')
+    
     class Meta:
         model = Unit
         fields = ('id', 'title', 'course', 'order', 'topics', 'lectures_duration', 'lectures_count')
-
-
+    
 class CoursePlanPriceSerializer(CountryFieldMixin, serializers.ModelSerializer):
     class Meta:
         model = CoursePlanPrice
@@ -413,7 +479,7 @@ class CourseSerializer(serializers.ModelSerializer, QuerySerializerMixin):
 
     def get_enrollment(self, course):
          user = self.context.get('request', None).user
-         return CourseEnrollment.objects.filter(user=user, course=course).exists()
+         return course.is_enrolled(user=user)
 
     def get_activity_status(self, course):
         user = self.context.get('request', None).user
@@ -482,7 +548,7 @@ class CoursesSerializer(serializers.ModelSerializer, QuerySerializerMixin):
 
     def get_enrollment(self, course):
          user = self.context.get('request', None).user
-         return CourseEnrollment.objects.filter(user=user, course=course).exists()
+         return course.is_enrolled(user=user)
 
     def get_activity_status(self, course):
         user = self.context.get('request', None).user

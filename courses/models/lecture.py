@@ -26,6 +26,10 @@ class Lecture(UserActionModel, TimeStampedModel):
 
     class Meta:
         ordering = ('-date_created', )
+        indexes = [
+            models.Index(fields=['topic']),
+            models.Index(fields=['duration']),
+        ]
 
     def __str__(self):
           return self.title
@@ -48,25 +52,42 @@ class Lecture(UserActionModel, TimeStampedModel):
         )
         return lecture_privacy
 
-
-    def is_allowed_to_access_lecture(self, user):
+    def is_allowed_to_access_course(self, user):
+        if not isinstance(user, User):
+            return False
         access_granted = self.check_privacy(user)
-        if access_granted or (user.is_student and user.student_profile.is_enrolled(self.topic.unit.course) ):
+        if access_granted or self.is_enrolled(user=user):
             return True
         return False
-
+    
+    
+    def is_allowed_to_access_lecture(self, user):
+        if not isinstance(user, User):
+            return False
+        
+        access_granted = self.check_privacy(user)
+        if access_granted or self.topic.unit.course.is_enrolled(user=user):
+            return True
+        return False
+    
     def check_privacy(self, user):
         if not hasattr(self, "privacy"):
             return False
+        
         elif self.privacy.is_private:
             return False
+        
         elif self.privacy.is_public:
             return True
-        elif self.privacy.is_public_for_limited_period:
-            return self.privacy.is_available_during_limited_period
-        else:
+        
+        elif self.privacy.is_shared:
             return user in self.privacy.shared_with.all()
-
+        
+        elif self.privacy.is_public_for_limited_duration:
+            return self.privacy.is_available_during_limited_duration
+        
+        return False
+    
     @property
     def discussions(self):
         return Discussion.objects.filter(object_type=ContentType.objects.get_for_model(self).id, status='approved')

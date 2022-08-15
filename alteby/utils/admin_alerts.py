@@ -9,8 +9,6 @@ def render_alert(message, error=False, warning=False, alert=False, tag="small", 
         classes = "text-danger"
     elif warning and tag:
         classes = "text-warning"
-    else:
-        return None
     
     if alert:
         html_body = f'''

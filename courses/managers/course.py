@@ -1,6 +1,8 @@
 from django.db.models.functions import Coalesce
 from django.db.models import Prefetch, Count, Sum, OuterRef, Exists, Subquery, IntegerField, Q, FloatField, Value
 from django.db import models
+from django.utils import timezone
+
 
 class CourseQuerySet(models.QuerySet):
 
@@ -24,7 +26,14 @@ class CourseQuerySet(models.QuerySet):
     def annotate_is_enrolled(self, user):
         from payment.models import CourseEnrollment
         return self.annotate(
-        is_enrolled=Exists(CourseEnrollment.objects.filter(course=OuterRef('pk'), user=user)),
+        is_enrolled=Exists(CourseEnrollment.objects.filter(
+            Q(lifetime_enrollment=True) |
+            Q(expiry_date__gt=timezone.now()),
+            course=OuterRef('pk'),
+            user=user,
+            force_expiry=False,
+            is_active=True
+            )),
         )
 
 

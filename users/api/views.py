@@ -206,13 +206,16 @@ class EnrolledCourses(APIView, PageNumberPagination):
 
     def get(self, request, user_id):
 
-        courses_ids = request.user.enrollments.values_list('course', flat=True)
+        enrolled_courses = request.user.get_enrolled_courses()
+        if enrolled_courses:
+            enrolled_courses = enrolled_courses.prefetch_related(
+                'tags', 'privacy__shared_with'
+                ).select_related(
+                    'privacy'
+                    ).all()
 
-        courses = Course.objects.prefetch_related('tags', 'privacy__shared_with').select_related('privacy').filter(id__in=courses_ids)
-
-        courses = self.paginate_queryset(courses, request, view=self)
-
-        serializer = CourseSerializer(courses, many=True, context={'request':request})
+        enrolled_courses = self.paginate_queryset(enrolled_courses, request, view=self)
+        serializer = CourseSerializer(enrolled_courses, many=True, context={'request':request})
         return self.get_paginated_response(serializer.data)
 
 class DeactivateUserView(APIView):

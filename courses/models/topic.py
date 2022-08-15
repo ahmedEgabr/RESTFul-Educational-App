@@ -8,6 +8,9 @@ class Topic(UserActionModel, TimeStampedModel):
 
     class Meta:
         ordering = ['order']
+        indexes = [
+            models.Index(fields=['unit']),
+        ]
 
     def __str__(self):
         return self.title

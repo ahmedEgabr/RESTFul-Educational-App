@@ -1,10 +1,13 @@
+import sys
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
+from django.utils import timezone
 from users.api.serializers import TeacherSerializer
+from payment.api.serializers import CourseEnrollmentSerializer
 from .serializers import (
 CourseSerializer, CoursesSerializer, CourseIndexSerialiser,
 UnitSerializer, TopicsListSerializer,
@@ -25,10 +28,179 @@ from django.db import IntegrityError
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from django.db import transaction
 from django.db.models.functions import Coalesce
-from django.db.models import Prefetch, Count, Sum, OuterRef, Exists, Subquery, IntegerField, Q, FloatField, Value
+from django.db.models import Prefetch, Count, Sum, OuterRef, Exists, Subquery, IntegerField, Q, FloatField, Value, BooleanField
 from payment.models import CourseEnrollment
 from .swagger_schema import course_detail_swagger_schema
+from categories.models import Category
+from categories.api.serializers import CategorySerializer
 
+
+class SearchView(APIView, PageNumberPagination):
+    
+    search_types=["courses", "units", "topics", "lectures", "categories", "teachers"]
+    
+    def get(self, request):
+        request_params = self.request.GET
+        search_type = request_params.get('type', None)
+        search_term = request_params.get('search_term', None)
+        
+        if not search_type and not search_term:
+            courses = self.get_courses(request, all=True)
+            return self.get_paginated_response(courses)
+        
+        
+        if search_type not in self.search_types:
+            return Response(
+                general_utils.error('invalid_search_type', search_types=self.search_types), 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        if not search_term:
+            result = getattr(self, "get_%s" % search_type, None)(request, all=True)
+        else:            
+            result = getattr(self, "get_%s" % search_type, None)(request, search_term)
+        return self.get_paginated_response(result)
+        
+
+    
+    def get_courses(self, request, search_term=None, all=False):
+        
+        if all:
+            courses = Course.objects.prefetch_related(
+                'tags', 'privacy__shared_with', 'units'
+                ).select_related('privacy').all()
+        else:
+            search_query = reduce(
+                operator.or_, (
+                    Q(title__icontains=word) | 
+                    Q(description__icontains=word) for word in search_term.split(" ")
+                    )
+                )
+            
+            courses = Course.objects.prefetch_related(
+                'tags', 'privacy__shared_with', 'units'
+                ).select_related('privacy').filter(search_query)
+        
+        courses = self.paginate_queryset(courses, request, view=self)
+        serializer = CoursesSerializer(courses, many=True, context={'request': request})
+        return serializer.data
+    
+    def get_units(self, request, search_term=None, all=False):
+
+        # Sub query of lectures_queryset
+        topics_queryset = Topic.objects.filter(
+            unit=OuterRef(OuterRef(OuterRef('pk')))
+            ).values_list('pk')
+
+        # Sub query of course_activity_queryset
+        lectures_queryset = Lecture.objects.filter(
+            topic__in=topics_queryset
+            ).values_list('pk')
+
+        # Sub query of the main SQL query
+        course_activity_queryset = CourseActivity.objects.filter(
+            user=request.user,
+            lecture__in=lectures_queryset,
+            is_finished=True
+            )
+
+        # Main SQL Query to execute
+        queryset = Unit.objects.annotate(
+            lectures_count=Count('topics__lectures', distinct=True),
+            lectures_duration=Coalesce(Sum('topics__lectures__duration'), 0, output_field=FloatField()),
+            num_of_lectures_viewed=general_utils.SQCount(Subquery(course_activity_queryset)),
+        )
+        
+        if all:
+            units = queryset.all()
+        else:
+            search_query = reduce(
+                operator.or_, (
+                    Q(title__icontains=word) for word in search_term.split(" ")
+                    )
+            )
+            units = queryset = queryset.filter(search_query)
+
+        units = self.paginate_queryset(units, request, view=self)
+        serializer = UnitSerializer(units, many=True, context={'request': request})
+        return serializer.data
+    
+    def get_topics(self, request, search_term=None, all=False):
+
+        # Sub query of course_activity_queryset
+        lectures_queryset = Lecture.objects.filter(
+            topic=OuterRef(OuterRef('pk'))
+            ).values_list('pk')
+
+        # Sub query of the main SQL query
+        course_activity_queryset = CourseActivity.objects.filter(
+            user=request.user,
+            lecture__in=lectures_queryset,
+            is_finished=True
+            )
+
+        # Main SQL Query to execute
+        queryset = Topic.objects.annotate(
+            lectures_count=Count('lectures', distinct=True),
+            lectures_duration=Coalesce(Sum('lectures__duration'), 0, output_field=FloatField()),
+            num_of_lectures_viewed=general_utils.SQCount(Subquery(course_activity_queryset))
+            )
+
+        if all:
+            topics = queryset.all()
+        else:
+            search_query = reduce(
+                operator.or_, (
+                    Q(title__icontains=word) for word in search_term.split(" ")
+                    )
+            )
+            topics = queryset = queryset.filter(search_query)
+            
+        topics = self.paginate_queryset(topics, request, view=self)
+        serializer = TopicsListSerializer(topics, many=True, context={'request': request})
+        return serializer.data
+    
+    def get_lectures(self, request, search_term=None, all=False):
+        queryset = lectures = Lecture.objects.select_related('privacy').prefetch_related('privacy__shared_with').annotate(
+                    viewed=Exists(
+                                CourseActivity.objects.filter(lecture=OuterRef('pk'), user=self.request.user, is_finished=True)
+                                ),
+                    left_off_at=Coalesce(Subquery(CourseActivity.objects.filter(lecture=OuterRef('pk'), user=request.user).values('left_off_at')), 0, output_field=FloatField())
+            )
+        if all:
+            lectures = queryset.all()
+        else:
+            search_query = reduce(
+                operator.or_, (
+                    Q(title__icontains=word) |
+                    Q(description__icontains=word) for word in search_term.split(" ")
+                    )
+            )
+            lectures = queryset.filter(search_query)
+        lectures = self.paginate_queryset(lectures, request, view=self)
+        serializer = DemoLectureSerializer(lectures, many=True, context={'request': request})
+        return serializer.data
+    
+    def get_categories(self, request, search_term=None, all=False):
+        
+        if all:
+            categories = Category.objects.all()
+        else:
+            search_query = reduce(
+                operator.or_, (
+                    Q(name__icontains=word) for word in search_term.split(" ")
+                    )
+                )
+            categories = Category.objects.filter(search_query)
+        
+        categories = self.paginate_queryset(categories, request, view=self)
+        serializer = CategorySerializer(categories, many=True, context={'request': request})
+        return serializer.data
+    
+    def get_teachers(self, request, search_term=None, all=False):
+        return None
+        
+    
 class CourseList(ListAPIView):
     serializer_class = CoursesSerializer
 
@@ -76,7 +248,25 @@ class CourseIndex(APIView):
         filter_kwargs = {
         'id': course_id
         }
-        prefetch_lectures = Prefetch('units__topics__lectures', queryset=Lecture.objects.select_related('privacy').prefetch_related('privacy__shared_with').annotate(is_enrolled=Exists(CourseEnrollment.objects.filter(course=course_id, user=request.user))))
+        prefetch_lectures = Prefetch(
+            'units__topics__lectures',
+            queryset=Lecture.objects.select_related(
+                'privacy'
+                ).prefetch_related(
+                    'privacy__shared_with'
+                    ).annotate(
+                        is_enrolled=Exists(
+                            CourseEnrollment.objects.filter(
+                                Q(lifetime_enrollment=True) |
+                                Q(expiry_date__gt=timezone.now()),
+                                course=course_id, 
+                                user=request.user,
+                                force_expiry=False,
+                                is_active=True
+                                )
+                            )
+                        )
+                    )
         course, found, error = utils.get_object(model=Course, filter_kwargs=filter_kwargs, prefetch_related=['units__topics',  prefetch_lectures])
         if not found:
             return Response(error, status=status.HTTP_404_NOT_FOUND)
@@ -117,33 +307,31 @@ class CourseUnitsList(APIView, PageNumberPagination):
         course, found, error = utils.get_course(course_id)
         if not found:
             return Response(error, status=status.HTTP_404_NOT_FOUND)
-
-        lectures_duration_queryset = Topic.objects.filter(unit=OuterRef('pk')).annotate(duration_sum=Sum('lectures__duration')).values('duration_sum')[:1]
-
+        
         # Sub query of lectures_queryset
         topics_queryset = Topic.objects.filter(
-                                        unit=OuterRef(OuterRef(OuterRef('pk')))
-                                        ).values_list('pk')
+            unit=OuterRef(OuterRef(OuterRef('pk')))
+            ).values_list('pk')
 
         # Sub query of course_activity_queryset
         lectures_queryset = Lecture.objects.filter(
-                                        topic__in=topics_queryset
-                                        ).values_list('pk')
+            topic__in=topics_queryset
+            ).values_list('pk')
 
         # Sub query of the main SQL query
         course_activity_queryset = CourseActivity.objects.filter(
-                                                        course=course,
-                                                        user=request.user,
-                                                        lecture__in=lectures_queryset,
-                                                        is_finished=True
-                                                        )
+                course=course,
+                user=request.user,
+                lecture__in=lectures_queryset,
+                is_finished=True
+                )
 
         # Main SQL Query to execute
-        units = course.units.all().annotate(
-                                lectures_count=Count('topics__lectures', distinct=True),
-                                lectures_duration=Coalesce(Subquery(lectures_duration_queryset), 0, output_field=FloatField()),
-                                num_of_lectures_viewed=general_utils.SQCount(Subquery(course_activity_queryset))
-                                )
+        units = course.units.annotate(
+            lectures_count=Count('topics__lectures', distinct=True),
+            lectures_duration=Coalesce(Sum('topics__lectures__duration'), 0, output_field=FloatField()),
+            num_of_lectures_viewed=general_utils.SQCount(Subquery(course_activity_queryset))
+            ).order_by("pk")
 
         units = self.paginate_queryset(units, request, view=self)
         serializer = UnitSerializer(units, many=True, context={'request': request})
@@ -154,32 +342,30 @@ class UnitDetail(APIView):
 
     def get(self, request, course_id, unit_id, format=None):
 
-        lectures_duration_queryset = Topic.objects.filter(unit=OuterRef('pk')).annotate(duration_sum=Sum('lectures__duration')).values('duration_sum')[:1]
-
         # Sub query of lectures_queryset
         topics_queryset = Topic.objects.filter(
-                                        unit=OuterRef(OuterRef(OuterRef('pk')))
-                                        ).values_list('pk')
+            unit=OuterRef(OuterRef(OuterRef('pk')))
+            ).values_list('pk')
 
         # Sub query of course_activity_queryset
         lectures_queryset = Lecture.objects.filter(
-                                        topic__in=topics_queryset
-                                        ).values_list('pk')
+            topic__in=topics_queryset
+            ).values_list('pk')
 
         # Sub query of the main SQL query
         course_activity_queryset = CourseActivity.objects.filter(
-                                                        course=OuterRef('course'),
-                                                        user=request.user,
-                                                        lecture__in=lectures_queryset,
-                                                        is_finished=True
-                                                        )
+            course=OuterRef('course'),
+            user=request.user,
+            lecture__in=lectures_queryset,
+            is_finished=True
+            )
 
         # Main SQL Query to execute
         unit = Unit.objects.annotate(
-                                lectures_count=Count('topics__lectures', distinct=True),
-                                lectures_duration=Coalesce(Subquery(lectures_duration_queryset), 0, output_field=FloatField()),
-                                num_of_lectures_viewed=general_utils.SQCount(Subquery(course_activity_queryset))
-                            ).get(id=unit_id, course__id=course_id)
+            lectures_count=Count('topics__lectures', distinct=True),
+            lectures_duration=Coalesce(Sum('topics__lectures__duration'), 0, output_field=FloatField()),
+            num_of_lectures_viewed=general_utils.SQCount(Subquery(course_activity_queryset))
+            ).get(id=unit_id, course__id=course_id)
 
         serializer = UnitSerializer(unit, many=False, context={'request': request})
         return Response(serializer.data)
@@ -778,3 +964,23 @@ class CoursePricingPlanList(APIView, PageNumberPagination):
         serializer = CoursePricingPlanSerializer(pricing_plans, many=True, context={'request': request})
         return self.get_paginated_response(serializer.data)
     
+
+class CourseEnrollmentView(APIView):
+    def get(self, request, course_id):
+        filter_kwargs = {
+            'id': course_id,
+        }
+        course, found, error = utils.get_object(model=Course, filter_kwargs=filter_kwargs, select_related=["privacy"])
+        if not found:
+            return Response(error, status=status.HTTP_404_NOT_FOUND)
+        
+        if not course.is_allowed_to_access_course(request.user):
+            return Response(general_utils.error('access_denied'), status=status.HTTP_402_PAYMENT_REQUIRED)
+        
+        is_enrolled = course.enroll(user=request.user)
+        
+        if not is_enrolled:
+            return Response(general_utils.error('cannot_enroll'), status=status.HTTP_402_PAYMENT_REQUIRED)
+        
+        return Response(general_utils.success('enrolled'), status=status.HTTP_201_CREATED)
+            

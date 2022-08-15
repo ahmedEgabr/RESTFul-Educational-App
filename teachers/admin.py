@@ -65,9 +65,7 @@ class LectureConfig(admin.ModelAdmin):
         qs = super().get_queryset(request)
         if request.user.is_superuser:
             return qs
-        return qs.filter(
-        Q(created_by=request.user) | Q(teacher__user_id=request.user.id)
-        )
+        return request.user.lectures_created.all()
 
     def save_model(self, request, new_lecture, form, change):
         # Update lecture duration
@@ -104,7 +102,8 @@ class LectureConfig(admin.ModelAdmin):
 @admin.register(CourseEnrollment, site=teacher_admin)
 class CourseEnrollmentConfig(CourseEnrollmentConfig):
     model = CourseEnrollment
-
+    change_form_template = 'admin/forms/course_enrollment_change_form.html'
+    
     readonly_fields = (
     'user',
     'course',
@@ -114,16 +113,22 @@ class CourseEnrollmentConfig(CourseEnrollmentConfig):
     'enrollment_duration_type',
     'lifetime_enrollment',
     'enrollment_date',
-    'expiry_date'
+    'expiry_date',
+    'force_expiry',
+    'is_active'
     )
-
-
+    
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         if request.user.is_superuser:
             return qs
-        return qs.filter(course__created_by=request.user)
-
+        return request.user.courses_created.all()
+    
+    @staticmethod
+    def expiry_date(object):
+        if not object.calculate_expiry_date:
+            return None
+        return date_format(timezone.localtime(object.calculate_expiry_date), 'DATETIME_FORMAT')
 
 
 @admin.register(Discussion, site=teacher_admin)

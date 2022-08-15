@@ -5,7 +5,7 @@ from django import forms
 from alteby.admin_sites import main_admin
 from django.db import transaction
 from nested_inline.admin import NestedStackedInline, NestedModelAdmin
-from .admin_forms import LectureForm, CoursePlanPriceForm
+from .admin_forms import LectureForm, LecturePrivacyPriceForm, CoursePlanPriceForm
 from courses.models import (
 Course, CoursePrivacy,
 CourseAttachement,
@@ -92,11 +92,11 @@ class CoursePrivacyInline(NestedStackedInline):
     fields = (
     'option',
     'shared_with',
-    'period',
-    'period_type',
+    'duration',
+    'duration_type',
     'available_from',
-    'enrollment_period',
-    'enrollment_period_type',
+    'enrollment_duration',
+    'enrollment_duration_type',
     'is_downloadable',
     'is_downloadable_for_enrolled_users_only',
     'is_quiz_available',
@@ -289,14 +289,15 @@ class LectureQuizInline(admin.StackedInline):
     
 class LecturePrivacyInline(admin.StackedInline):
     model = LecturePrivacy
+    form = LecturePrivacyPriceForm
     fields = (
     'option',
     'shared_with',
-    # 'period',
-    # 'period_type',
+    # 'duration',
+    # 'duration_type',
     # 'available_from',
-    # 'enrollment_period',
-    # 'enrollment_period_type',
+    # 'enrollment_duration',
+    # 'enrollment_duration_type',
     'is_downloadable',
     'is_downloadable_for_enrolled_users_only',
     'is_quiz_available',

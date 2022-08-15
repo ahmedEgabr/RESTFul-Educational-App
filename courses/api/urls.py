@@ -10,7 +10,8 @@ QuizDetail, CourseQuizAnswer, LectureQuizAnswer,
 CourseQuizResult, LectureQuizResult,
 CourseAttachement, LectureAttachement,
 CourseTreeLecturesList, LectureExternalLinksList, LectureReferenceList, CourseReferenceList,
-CourseTeachersList, CoursePricingPlanList
+CourseTeachersList, CoursePricingPlanList,
+CourseEnrollmentView
 )
 
 app_name = 'courses'
@@ -22,6 +23,7 @@ urlpatterns = [
   # Courses API
   path('featured/', FeaturedCoursesList.as_view(), name='featured-course'),
   path('<int:course_id>/', CourseDetail.as_view(), name='course'),
+  path('<int:course_id>/enroll', CourseEnrollmentView.as_view(), name='enroll-course'),
   path('<int:course_id>/index', CourseIndex.as_view(), name='course-index'),
   path('<int:course_id>/feedbacks/', CourseFeedbacks.as_view(), name='course_feedbacks'),
   path('<int:course_id>/discussions', CourseDiscussions.as_view(), name='course_discussions'),

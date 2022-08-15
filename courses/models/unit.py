@@ -11,6 +11,9 @@ class Unit(UserActionModel, TimeStampedModel):
 
     class Meta:
         ordering = ['order']
+        indexes = [
+            models.Index(fields=['course']),
+        ]
 
     def __str__(self):
         return self.title

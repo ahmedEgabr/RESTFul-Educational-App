@@ -1,4 +1,5 @@
 from django.db import models, transaction
+from django.utils import timezone
 from django.core.validators import MinValueValidator
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, BaseUserManager, PermissionsMixin
 from django.contrib.auth.validators import UnicodeUsernameValidator
@@ -157,16 +158,30 @@ class User(AbstractBaseUser, PermissionsMixin):
         return anonymous_user
 
     @property
-    def courses(self):
+    def courses_created(self):
         from courses.models.course import Course
         return Course.objects.filter(created_by=self)
 
     @property
-    def lectures(self):
+    def lectures_created(self):
         from courses.models.lecture import Lecture
         return Lecture.objects.filter(
         Q(created_by=self) | Q(teacher__user_id=self.id)
         )
+    
+    def get_enrolled_courses(self):
+        enrolled_courses_ids = self.enrollments.filter(
+            Q(lifetime_enrollment=True) |
+            Q(expiry_date__gt=timezone.now()),
+            force_expiry=False,
+            is_active=True
+        ).values_list('course', flat=True)
+        
+        if not enrolled_courses_ids:
+            return self.enrollments.none()
+        
+        from courses.models.course import Course
+        return Course.objects.filter(id__in=enrolled_courses_ids)
 
 class Student(models.Model):
 

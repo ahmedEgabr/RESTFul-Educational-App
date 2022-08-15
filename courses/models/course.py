@@ -1,9 +1,11 @@
+from django.utils import timezone
 from django.db import models
 from ckeditor.fields import RichTextField
 from django.contrib.contenttypes.models import ContentType
 from main.utility_models import UserActionModel, TimeStampedModel
 from courses.managers import CustomCourseManager
 from courses.models.discussion import Discussion
+from courses.models.abstract_privacy import Privacy
 from courses.models.lecture import Lecture
 from courses.models.topic import Topic
 from courses.models.course_privacy import CoursePrivacy
@@ -13,6 +15,8 @@ from courses.models.course_pricing_plan import CoursePricingPlan
 from courses.models.course_plan_price import CoursePlanPrice
 from users.models import User, Teacher
 from main.utility_models import Languages
+from payment.models import CourseEnrollment
+
 
 class Course(UserActionModel):
 
@@ -43,23 +47,31 @@ class Course(UserActionModel):
         return CoursePrivacy.objects.get_or_create(course=course)
 
     def is_allowed_to_access_course(self, user):
+        if not isinstance(user, User):
+            return False
         access_granted = self.check_privacy(user)
-        if access_granted or (user.is_student and user.student_profile.is_enrolled(course=self)):
+        if access_granted or self.is_enrolled(user=user):
             return True
         return False
 
     def check_privacy(self, user):
-
         if not hasattr(self, "privacy"):
             return False
+        
         elif self.privacy.is_private:
             return False
+        
         elif self.privacy.is_public:
             return True
-        elif self.privacy.is_public_for_limited_period:
-            return self.privacy.is_available_during_limited_period
-        else:
+        
+        elif self.privacy.is_shared:
             return user in self.privacy.shared_with.all()
+        
+        elif self.privacy.is_public_for_limited_duration:
+            return self.privacy.is_available_during_limited_duration
+        
+        return False
+
 
     def delete_course_activity(self):
         CourseActivity.objects.filter(course=self).delete()
@@ -193,3 +205,41 @@ class Course(UserActionModel):
         if not pricing_plan:
             pricing_plan = queryset.filter(is_active=True, is_default=True).first()
         return pricing_plan
+    
+    def is_enrolled(self, user):
+        return CourseEnrollment.objects.filter(
+            models.Q(lifetime_enrollment=True) |
+            models.Q(expiry_date__gt=timezone.now()),
+            course=self, 
+            user=user,
+            force_expiry=False,
+            is_active=True
+            ).exists()
+    
+    def enroll(self, user):
+        if not isinstance(user, User):
+            return False
+        
+        if self.is_enrolled(user=user):
+            return True
+        
+        if self.privacy.is_public_for_limited_duration:
+            created = CourseEnrollment.objects.create(
+                user=user,
+                course=self,
+                payment_type=CourseEnrollment.PAYMENT_TYPES.free,
+                enrollment_duration=self.privacy.enrollment_duration,
+                enrollment_duration_type=self.privacy.enrollment_duration_type
+            )
+        else:
+            created = CourseEnrollment.objects.create(
+                user=user,
+                course=self,
+                payment_type=CourseEnrollment.PAYMENT_TYPES.free,
+                lifetime_enrollment=True
+            )
+        
+        if not created:
+            return False
+        return True
+        

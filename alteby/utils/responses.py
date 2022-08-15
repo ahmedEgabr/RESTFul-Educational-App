@@ -23,7 +23,8 @@ error_messages = {
     'empty_quiz_answers': "Quiz answers cannot be empty.",
     'incorrect_left_off': 'Left off at value must be positive and numeric.',
     'incorrect_is_finished': 'is_finished value must be boolean.',
-    'playlist_exists': 'Playlist with this name already exists.'
+    'playlist_exists': 'Playlist with this name already exists.',
+    'invalid_search_type': "Invalid search type."
 }
 
 success_messages = {
@@ -32,5 +33,6 @@ success_messages = {
     'account_deactivated': "Account Deactivated Successfully",
     'playlist_created': 'Playlist created successfully!',
     'added_to_playlist': "Successfully added.",
-    'deleted': 'Successfully Deleted.'
+    'deleted': 'Successfully Deleted.',
+    'cannot_enroll': "Connot enroll this course."
 }

@@ -13,6 +13,10 @@ class CourseActivity(TimeStampedModel):
 
     class Meta:
         verbose_name_plural = 'Courses Activity Tracker'
+        indexes = [
+            models.Index(fields=['user', 'course']),
+            models.Index(fields=['user']),
+        ]
 
     def __str__(self):
           return f'{self.user.email}-{self.course.title}-{self.lecture.title}'

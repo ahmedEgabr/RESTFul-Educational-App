@@ -12,46 +12,46 @@ class Privacy(UserActionModel, TimeStampedModel):
         ('public', 'Public'),
         ('private', 'Private'),
         ('shared', 'Shared'),
-        ('limited_period', 'Public (for a Limited Period)'),
+        ('limited_duration', 'Public (for a Limited duration)'),
     )
 
-    option = models.CharField(max_length=15, choices=PRIVACY_CHOICES, default=PRIVACY_CHOICES.private)
+    option = models.CharField(max_length=20, choices=PRIVACY_CHOICES, default=PRIVACY_CHOICES.private)
     shared_with = models.ManyToManyField("users.User", blank=True)
 
     available_from = models.DateTimeField(
     blank=True,
     null=True,
-    help_text="Must be set when choosing public (for a limited period) option."
+    help_text="Must be set when choosing public (for a limited duration) option."
     )
 
-    period = models.IntegerField(
+    duration = models.IntegerField(
     blank=True,
     null=True,
-    help_text="Must be set when choosing public (for a limited period) option."
+    help_text="Must be set when choosing public (for a limited duration) option."
     )
 
-    period_type = models.CharField(
+    duration_type = models.CharField(
     blank=True,
     max_length=10,
     choices=DateFormat.choices,
-    help_text="Must be set when choosing public (for a limited period) option."
+    help_text="Must be set when choosing public (for a limited duration) option."
     )
 
-    enrollment_period = models.IntegerField(
+    enrollment_duration = models.IntegerField(
     blank=True,
     null=True,
     verbose_name="When avilable for free, users can enroll it for",
     help_text="""
-    The period that the course will be availabe for the user form the date of the enrollment when the course was free.
-    Must be set when choosing public (for limited period) option.
+    The duration that the course will be availabe for the user form the date of the enrollment when the course was free.
+    Must be set when choosing public (for limited duration) option.
     """
     )
 
-    enrollment_period_type = models.CharField(
+    enrollment_duration_type = models.CharField(
     blank=True,
     max_length=10,
     choices=DateFormat.choices,
-    help_text="Must be set when choosing public (for a limited period) option."
+    help_text="Must be set when choosing public (for a limited duration) option."
     )
 
     is_downloadable = models.BooleanField(default=True, verbose_name="Is Downloadable")
@@ -76,17 +76,17 @@ class Privacy(UserActionModel, TimeStampedModel):
         abstract = True
 
     def clean_fields(self, **kwargs):
-        if self.option == self.PRIVACY_CHOICES.limited_period:
-            if not self.period:
-                raise ValidationError({"period": "Option Public for Limited Period requeires this field to be set."})
+        if self.option == self.PRIVACY_CHOICES.limited_duration:
+            if not self.duration:
+                raise ValidationError({"duration": "Option Public for Limited Duration requeires this field to be set."})
             if not self.available_from:
-                raise ValidationError({"available_from": "Option Public for Limited Period requeires this field to be set."})
-            if not self.period_type:
-                raise ValidationError({"period_type": "Option Public for Limited Period requeires this field to be set."})
-            if not self.enrollment_period:
-                raise ValidationError({"enrollment_period": "Option Public for Limited Period requeires this field to be set."})
-            if not self.enrollment_period_type:
-                raise ValidationError({"enrollment_period_type": "Option Public for Limited Period requeires this field to be set."})
+                raise ValidationError({"available_from": "Option Public for Limited Duration requeires this field to be set."})
+            if not self.duration:
+                raise ValidationError({"duration_type": "Option Public for Limited Duration requeires this field to be set."})
+            if not self.enrollment_duration:
+                raise ValidationError({"enrollment_duration": "Option Public for Limited Duration requeires this field to be set."})
+            if not self.enrollment_duration_type:
+                raise ValidationError({"enrollment_duration_type": "Option Public for Limited Duration requeires this field to be set."})
         super(Privacy, self).clean_fields(**kwargs)
 
     def save(self, *args, **kwargs):
@@ -99,8 +99,8 @@ class Privacy(UserActionModel, TimeStampedModel):
         return self.option == self.PRIVACY_CHOICES.public
 
     @property
-    def is_public_for_limited_period(self):
-        return self.option == self.PRIVACY_CHOICES.limited_period
+    def is_public_for_limited_duration(self):
+        return self.option == self.PRIVACY_CHOICES.limited_duration
 
     @property
     def is_private(self):
@@ -115,17 +115,17 @@ class Privacy(UserActionModel, TimeStampedModel):
         self.save()
 
     @property
-    def is_available_during_limited_period(self):
-        if not self.is_public_for_limited_period:
+    def is_available_during_limited_duration(self):
+        if not self.is_public_for_limited_duration:
             return False
 
         current_datetime = timezone.now()
         if current_datetime < self.available_from:
             return False
 
-        period_type = getattr(DateFormat, self.period_type)
+        duration_type = getattr(DateFormat, self.duration_type)
         kwargs = {
-        f"{period_type}": +self.period
+        f"{duration_type}": +self.duration
         }
         expiry_date = self.available_from + relativedelta(**kwargs)
         if current_datetime > expiry_date:
