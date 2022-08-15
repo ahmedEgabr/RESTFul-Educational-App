@@ -19,3 +19,4 @@ class Command(BaseCommand):
             Lecture.create_privacy(lecture=lecture)
                 
         self.stdout.write(self.style.SUCCESS("Done."))
+        
