@@ -1,3 +1,5 @@
+from django.urls import path
+from django.template.response import TemplateResponse
 from django.contrib.admin import AdminSite
 from django.contrib.admin.apps import AdminConfig
 from .constants import TEACHER_GROUP, STUDENT_GROUP
@@ -23,6 +25,23 @@ class MainAdmin(AdminSite):
         if not (request.user.is_active and request.user.is_superuser or is_allowed):
             return False
         return True
+
+    def get_urls(self):
+        urls = super().get_urls()
+        my_urls = [
+            path('analytics/', self.my_view),
+        ]
+        return my_urls + urls
+
+    def my_view(self, request):
+        # ...
+        context = dict(
+           # Include common variables for rendering the admin template.
+           self.each_context(request),
+           # Anything else you want in the context...
+           key=1,
+        )
+        return TemplateResponse(request, "admin_analytics/base.html", context)
 
 
 class MainAdminConfig(AdminConfig):

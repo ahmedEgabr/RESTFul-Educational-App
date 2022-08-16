@@ -71,7 +71,8 @@ INSTALLED_APPS = [
     'payment',
     'playlists',
     'categories',
-    'question_banks'
+    'question_banks',
+    'admin_analytics'
 ]
 
 # ADMIN_REORDER = (
@@ -252,6 +253,15 @@ JAZZMIN_SETTINGS = {
     # The model admin to search from the search bar, search bar omitted if excluded
     "search_model": "users.User",
 
+    # Custom links to append to app groups, keyed on app name
+    "custom_links": {
+        "main": [{
+            "name": "Analytics", 
+            "url": "/admin/analytics", 
+            "icon": "fas fa-chart-pie",
+        }]
+    },
+    
     # #############
     # # Side Menu #
     # #############
