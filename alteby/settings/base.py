@@ -231,3 +231,113 @@ CKEDITOR_CONFIGS = {
         'width': "100%",
     },
 }
+
+
+JAZZMIN_SETTINGS = {
+    # title of the window (Will default to current_admin_site.site_title if absent or None)
+    "site_title": "Emtyaz Advoisor",
+
+    # Title on the login screen (19 chars max) (defaults to current_admin_site.site_header if absent or None)
+    "site_header": "Emtyaz Advoisor",
+
+    # Title on the brand (19 chars max) (defaults to current_admin_site.site_header if absent or None)
+    "site_brand": "Emtyaz Advoisor",
+
+    # Welcome text on the login screen
+    "welcome_sign": "Emtyaz Advisor Administration",
+
+    # Copyright on the footer
+    "copyright": "Emtyaz Advisor",
+
+    # The model admin to search from the search bar, search bar omitted if excluded
+    "search_model": "users.User",
+
+    # #############
+    # # Side Menu #
+    # #############
+
+    # Whether to display the side menu
+    "show_sidebar": True,
+
+    # List of apps (and/or models) to base side menu ordering off of (does not need to contain all apps/models)
+    "order_with_respect_to": ["main", "auth", "users", "courses", "courses.course", "courses.lecture", "courses.lecturequality"],
+
+    # Custom icons for side menu apps/models See https://fontawesome.com/icons?d=gallery&m=free&v=5.0.0,5.0.1,5.0.10,5.0.11,5.0.12,5.0.13,5.0.2,5.0.3,5.0.4,5.0.5,5.0.6,5.0.7,5.0.8,5.0.9,5.1.0,5.1.1,5.2.0,5.3.0,5.3.1,5.4.0,5.4.1,5.4.2,5.13.0,5.12.0,5.11.2,5.11.1,5.10.0,5.9.0,5.8.2,5.8.1,5.7.2,5.7.1,5.7.0,5.6.3,5.5.0,5.4.2
+    # for the full list of 5.13.0 free icon classes
+    "icons": {
+        "auth.Group": "fas fa-users",
+        "users.User": "fas fa-fingerprint",
+        "users.Teacher": "fas fa-solid fa-user-tie",
+        "users.Student": "fas fa-solid fa-user-graduate",
+        
+        "main.AppStatus": "fas fa-wifi",
+        "main.AppVersion": "fas fa-code-branch",
+        "main.AppConfiguration": "fas fa-cogs",
+        "main.ContactUs": "fas fa-address-card",
+        
+        "courses.Course": "fas fa-book-open",
+        "courses.Lecture": "fab fa-youtube",
+        "courses.LectureQuality": "fas fa-play",
+        "courses.CorrectInfo": "fas fa-info-circle",
+        "courses.CourseActivity": "fas fa-chart-bar",
+        "courses.CoursePricingPlan":"fas fa-money-check-alt",
+        "courses.Discussion": "fas fa-comments",
+        "courses.Feedback": "fas fa-envelope",
+        "courses.Note": "fas fa-sticky-note",
+        "courses.QuizAttempt": "fas fa-undo",
+        "courses.Reference": "fas fa-book-medical",
+        "courses.Report": "fas fa-flag",
+        
+        "playlists.Favorite": "fas fa-heart",
+        "playlists.Playlist": "fas fa-play-circle",
+        "playlists.WatchHistory": "fas fa-history",
+        
+        "question_banks.Question": "fas fa-question-circle",
+        "question_banks.QuestionResult": "fas fa-clipboard-check",
+
+        
+    },
+    # Icons that are used when one is not manually specified
+    "default_icon_parents": "fas fa-chevron-circle-right",
+    "default_icon_children": "fas fa-circle",
+
+    #################
+    # Related Modal #
+    #################
+    # Use modals instead of popups
+    "related_modal_active": True,
+
+}
+
+JAZZMIN_UI_TWEAKS = {
+    "navbar_small_text": False,
+    "footer_small_text": False,
+    "body_small_text": False,
+    "brand_small_text": False,
+    "brand_colour": False,
+    "accent": "accent-primary",
+    "navbar": "navbar-gray-dark navbar-dark",
+    "no_navbar_border": False,
+    "navbar_fixed": True,
+    "layout_boxed": False,
+    "footer_fixed": False,
+    "sidebar_fixed": False,
+    "sidebar": "sidebar-dark-primary",
+    "sidebar_nav_small_text": False,
+    "sidebar_disable_expand": False,
+    "sidebar_nav_child_indent": False,
+    "sidebar_nav_compact_style": False,
+    "sidebar_nav_legacy_style": True,
+    "sidebar_nav_flat_style": False,
+    "theme": "default",
+    "dark_mode_theme": None,
+    "button_classes": {
+        "primary": "btn-outline-primary",
+        "secondary": "btn-outline-secondary",
+        "info": "btn-outline-info",
+        "warning": "btn-outline-warning",
+        "danger": "btn-outline-danger",
+        "success": "btn-outline-success"
+    },
+    "actions_sticky_top": True
+}
