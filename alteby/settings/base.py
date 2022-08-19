@@ -103,7 +103,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # 'admin_reorder.middleware.ModelAdminReorder',
     'alteby.middleware.CoursePermissionMiddleware',
-    # 'alteby.middlewares.TimezoneMiddleware',
+    'alteby.middlewares.TimezoneMiddleware',
     'django_currentuser.middleware.ThreadLocalUserMiddleware',
 
 ]
@@ -341,3 +341,13 @@ JAZZMIN_UI_TWEAKS = {
     },
     "actions_sticky_top": True
 }
+
+# Abstract API
+IP_GEO_URL = "https://ipgeolocation.abstractapi.com/v1/?api_key={0}&ip_address={1}"
+IP_GEO_KEY = env('IP_GEO_KEY')
+IP_GEO_WHITELISTED_VIEWS = [
+    "CourseList",
+    "FeaturedCoursesList",
+    "CourseDetail", 
+    "CoursePricingPlanList",
+    ]

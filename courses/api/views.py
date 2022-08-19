@@ -231,6 +231,7 @@ class CourseDetail(APIView):
 
     @course_detail_swagger_schema
     def get(self, request, course_id, format=None):
+        print(request.country)
 
         course = Course.objects.prefetch_related(
         'privacy__shared_with', 'categories__course_set').select_related('privacy').filter(

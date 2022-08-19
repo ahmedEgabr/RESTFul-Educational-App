@@ -41,7 +41,7 @@ urlpatterns = [
     path('admin/', main_admin.urls),
     path("teacher/", teacher_admin.urls),
     path('ckeditor/', include('ckeditor_uploader.urls')),
-    
+
     # Main
     path('main', include('main.urls', 'main')),
     # Main
