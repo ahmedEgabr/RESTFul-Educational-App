@@ -74,15 +74,6 @@ class Lecture(UserActionModel, TimeStampedModel):
         )
         return lecture_privacy
 
-    def is_allowed_to_access_course(self, user):
-        if not isinstance(user, User):
-            return False
-        access_granted = self.check_privacy(user)
-        if access_granted or self.is_enrolled(user=user):
-            return True
-        return False
-    
-    
     def is_allowed_to_access_lecture(self, user):
         if not isinstance(user, User):
             return False
