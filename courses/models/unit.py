@@ -1,7 +1,9 @@
 from django.db import models
+from django.core.exceptions import ValidationError
 from django.db.models import Count, Sum
 from main.utility_models import UserActionModel, TimeStampedModel
 from courses.models import Lecture
+from alteby.utils import render_alert
 
 
 class Unit(UserActionModel, TimeStampedModel):
@@ -17,6 +19,25 @@ class Unit(UserActionModel, TimeStampedModel):
 
     def __str__(self):
         return self.title
+    
+    def clean_fields(self, **kwargs):
+        # if self.__class__.objects.filter(course=self.course, order=self.order).exclude(id=self.id).exists():
+        #     raise ValidationError(
+        #         {
+        #             "order": render_alert(
+        #                 """
+        #                 Unit with the same order is already exists.
+        #                 """,
+        #                 tag="strong",
+        #                 error=True  
+        #                 )
+        #         }
+        #     ) 
+        super(Unit, self).clean_fields(**kwargs)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super(Unit, self).save(*args, **kwargs)
 
     def get_topics_count(self):
         return self.topics.count()

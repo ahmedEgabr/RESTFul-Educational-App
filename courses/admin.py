@@ -31,6 +31,8 @@ CoursePlanPrice,
 Privacy
 )
 from .tasks import detect_and_convert_lecture_qualities, extract_and_set_lecture_audio
+from django.core.exceptions import ValidationError
+from alteby.utils import render_alert
 
 main_admin.register(QuizAttempt)
 main_admin.register(Unit)
@@ -62,26 +64,56 @@ class LectureQualityConfig(admin.ModelAdmin):
         (None, {'fields': ('lecture', 'video', 'quality')}),
     )
 
+class TipicInlineFormSet(forms.models.BaseInlineFormSet):
 
+    def clean(self):
+        """Check order of each topic"""
+        orders = [form.cleaned_data["order"] if form.cleaned_data and "order" in form.cleaned_data else 1 for form in self.forms ]
+        duplicated_orders = {x for x in orders if orders.count(x) > 1}
+        if duplicated_orders:
+            raise ValidationError(
+               render_alert(
+                   message=f"Topic with order: {next(iter(duplicated_orders))} is already exists.",
+                   tag="strong",
+                   error=True
+               )
+            )
+            
 class UnitTopicsInline(NestedStackedInline):
     model = Topic
     exclude = ['created_by', 'updated_by']
     can_delete = True
-    extra = 1
+    extra = 0
     verbose_name_plural = 'Topics'
     fk_name = 'unit'
     list_select_related = ['unit']
+    formset = TipicInlineFormSet
+
+class UnitInlineFormSet(forms.models.BaseInlineFormSet):
+
+    def clean(self):
+        """Check order of each unit"""
+        orders = [form.cleaned_data["order"] if form.cleaned_data and "order" in form.cleaned_data else 1 for form in self.forms ]
+        duplicated_orders = {x for x in orders if orders.count(x) > 1}
+        if duplicated_orders:
+            raise ValidationError(
+               render_alert(
+                   message=f"Unit with order: {next(iter(duplicated_orders))} is already exists.",
+                   tag="strong",
+                   error=True
+               )
+            )
 
 
 class CourseUnitsInline(NestedStackedInline):
     model = Unit
     exclude = ['created_by', 'updated_by']
     can_delete = True
-    extra = 2
+    extra = 0
     verbose_name_plural = 'Units'
     fk_name = 'course'
     inlines = [UnitTopicsInline]
-
+    formset = UnitInlineFormSet
     def get_queryset(self, request):
         qs = super(CourseUnitsInline, self).get_queryset(request)
         return qs.select_related("course")
@@ -229,7 +261,6 @@ class CourseConfig(NestedModelAdmin):
     )
     
     change_form_template = 'admin/forms/course_change_form.html'
-
 
     @transaction.atomic
     def save_formset(self, request, form, formset, change):
