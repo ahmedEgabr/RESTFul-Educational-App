@@ -43,6 +43,7 @@ INTERNAL_IPS = [
 # Application definition
 
 INSTALLED_APPS = [
+    'main',
     'dal',
     'dal_select2',
     'jazzmin',
@@ -53,6 +54,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'nested_inline',
+    "nested_admin",
     # 'admin_reorder',
     'rest_framework',
     'rest_framework.authtoken',
@@ -64,7 +66,6 @@ INSTALLED_APPS = [
     'django_countries',
 
     # APPS
-    'main',
     'users',
     'teachers',
     'courses',

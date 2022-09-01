@@ -8,8 +8,7 @@ class AssignUserGeoLocation(MiddlewareMixin):
         if view_func.__name__ not in getattr(settings, "IP_GEO_WHITELISTED_VIEWS", []):
             return None
         
-        # user_ip = get_user_ip(request)
-        user_ip = "197.62.112.80"
+        user_ip = get_user_ip(request)
         if user_ip:
             ip_utils = IPUtils(ip=user_ip)
             request.country = ip_utils.country

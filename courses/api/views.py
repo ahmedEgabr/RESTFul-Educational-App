@@ -216,6 +216,7 @@ class CourseList(ListAPIView):
             serializer = self.get_serializer()
             return serializer.get_related_queries(queryset)
 
+
 class FeaturedCoursesList(ListAPIView):
     serializer_class = CoursesSerializer
 
@@ -231,8 +232,6 @@ class CourseDetail(APIView):
 
     @course_detail_swagger_schema
     def get(self, request, course_id, format=None):
-        print(request.country)
-
         course = Course.objects.prefetch_related(
         'privacy__shared_with', 'categories__course_set').select_related('privacy').filter(
             id=course_id

@@ -40,7 +40,7 @@ main_admin.register(Topic)
 main_admin.register(Reference)
 main_admin.register(CorrectInfo)
 main_admin.register(Report)
-
+import nested_admin
 
 @admin.register(Note, site=main_admin)
 class NoteConfig(admin.ModelAdmin):
@@ -64,12 +64,24 @@ class LectureQualityConfig(admin.ModelAdmin):
         (None, {'fields': ('lecture', 'video', 'quality')}),
     )
 
-class TipicInlineFormSet(forms.models.BaseInlineFormSet):
+class TopicInlineFormSet(forms.models.BaseInlineFormSet):
 
     def clean(self):
         """Check order of each topic"""
-        orders = [form.cleaned_data["order"] if form.cleaned_data and "order" in form.cleaned_data else 1 for form in self.forms ]
+        orders = []
+        for form in self.forms:
+            if form.instance.id:
+                orders.append(form.instance.order)
+            elif form.has_changed() and not form.instance.id:
+                if form.cleaned_data and "order" in form.cleaned_data:
+                    orders.append(form.cleaned_data["order"])
+                else:
+                    orders.append(1)
+            else:
+                form.empty_permitted = True
+        
         duplicated_orders = {x for x in orders if orders.count(x) > 1}
+        
         if duplicated_orders:
             raise ValidationError(
                render_alert(
@@ -78,8 +90,9 @@ class TipicInlineFormSet(forms.models.BaseInlineFormSet):
                    error=True
                )
             )
+        return super().clean()
             
-class UnitTopicsInline(NestedStackedInline):
+class UnitTopicsInline(nested_admin.NestedStackedInline):
     model = Topic
     exclude = ['created_by', 'updated_by']
     can_delete = True
@@ -87,13 +100,25 @@ class UnitTopicsInline(NestedStackedInline):
     verbose_name_plural = 'Topics'
     fk_name = 'unit'
     list_select_related = ['unit']
-    formset = TipicInlineFormSet
+    formset = TopicInlineFormSet
+    
 
 class UnitInlineFormSet(forms.models.BaseInlineFormSet):
 
-    def clean(self):
+    def clean(self):            
         """Check order of each unit"""
-        orders = [form.cleaned_data["order"] if form.cleaned_data and "order" in form.cleaned_data else 1 for form in self.forms ]
+        orders = []
+        for form in self.forms:
+            if form.instance.id:
+                orders.append(form.instance.order)
+            elif form.has_changed() and not form.instance.id:
+                if form.cleaned_data and "order" in form.cleaned_data:
+                    orders.append(form.cleaned_data["order"])
+                else:
+                    orders.append(1)
+            else:
+                form.empty_permitted = True
+        
         duplicated_orders = {x for x in orders if orders.count(x) > 1}
         if duplicated_orders:
             raise ValidationError(
@@ -103,9 +128,10 @@ class UnitInlineFormSet(forms.models.BaseInlineFormSet):
                    error=True
                )
             )
+        return super().clean()
 
 
-class CourseUnitsInline(NestedStackedInline):
+class CourseUnitsInline(nested_admin.NestedStackedInline):
     model = Unit
     exclude = ['created_by', 'updated_by']
     can_delete = True
@@ -114,12 +140,13 @@ class CourseUnitsInline(NestedStackedInline):
     fk_name = 'course'
     inlines = [UnitTopicsInline]
     formset = UnitInlineFormSet
+    
     def get_queryset(self, request):
         qs = super(CourseUnitsInline, self).get_queryset(request)
         return qs.select_related("course")
 
 
-class CoursePrivacyInline(NestedStackedInline):
+class CoursePrivacyInline(nested_admin.NestedStackedInline):
     model = CoursePrivacy
     fields = (
     'option',
@@ -147,7 +174,7 @@ class CoursePrivacyInline(NestedStackedInline):
         return qs.select_related("course")
 
 
-class CourseAttachementsInline(NestedStackedInline):
+class CourseAttachementsInline(nested_admin.NestedStackedInline):
     model = CourseAttachement
     exclude = ['created_by', 'updated_by']
     can_delete = True
@@ -234,7 +261,7 @@ class CoursePricingPlanConfig(admin.ModelAdmin):
 
 
 @admin.register(Course, site=main_admin)
-class CourseConfig(NestedModelAdmin):
+class CourseConfig(nested_admin.NestedModelAdmin):
     model = Course
 
     list_filter = ('categories', 'language', 'created_by', 'updated_by', 'date_created')
