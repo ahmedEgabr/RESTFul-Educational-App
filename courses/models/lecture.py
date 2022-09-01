@@ -2,6 +2,7 @@ from pathlib import Path
 import cv2
 from ckeditor.fields import RichTextField
 from django.db import models
+from users.models import User
 from alteby.utils import render_alert
 from django.core.exceptions import ValidationError
 from django.contrib.contenttypes.models import ContentType

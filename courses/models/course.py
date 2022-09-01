@@ -2,10 +2,9 @@ from django.utils import timezone
 from django.db import models
 from ckeditor.fields import RichTextField
 from django.contrib.contenttypes.models import ContentType
-from main.utility_models import UserActionModel, TimeStampedModel
+from main.utility_models import UserActionModel
 from courses.managers import CustomCourseManager
 from courses.models.discussion import Discussion
-from courses.models.abstract_privacy import Privacy
 from courses.models.lecture import Lecture
 from courses.models.topic import Topic
 from courses.models.course_privacy import CoursePrivacy
