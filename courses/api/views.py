@@ -7,28 +7,27 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from django.utils import timezone
 from users.api.serializers import TeacherSerializer
-from payment.api.serializers import CourseEnrollmentSerializer
 from .serializers import (
 CourseSerializer, CoursesSerializer, CourseIndexSerialiser,
 UnitSerializer, TopicsListSerializer,
-TopicDetailSerializer, UnitTopicsSerializer, DemoLectureSerializer,
+TopicDetailSerializer, DemoLectureSerializer,
 FullLectureSerializer, QuizSerializer,
 QuizResultSerializer, AttachementSerializer,
 DiscussionSerializer, FeedbackSerializer,
-QuestionSerializer, LectureExternalLinkSerializer, ReferenceSerializer, CoursePricingPlanSerializer
+LectureExternalLinkSerializer, ReferenceSerializer, CoursePricingPlanSerializer
 )
-from courses.models import Course, Unit, Topic, CourseActivity, Lecture, Discussion, Feedback, Quiz
-from question_banks.models import Question, Choice, QuestionResult
+from courses.models import Course, Unit, Topic, CourseActivity, Lecture, Discussion, Feedback
+from question_banks.models import Question, Choice, QuestionAnswer
 from playlists.models import WatchHistory
 from functools import reduce
 import operator
 import courses.utils as utils
 import alteby.utils as general_utils
 from django.db import IntegrityError
-from rest_framework.generics import ListAPIView, RetrieveAPIView
+from rest_framework.generics import ListAPIView
 from django.db import transaction
 from django.db.models.functions import Coalesce
-from django.db.models import Prefetch, Count, Sum, OuterRef, Exists, Subquery, IntegerField, Q, FloatField, Value, BooleanField
+from django.db.models import Prefetch, Count, Sum, OuterRef, Exists, Subquery, IntegerField, Q, FloatField
 from payment.models import CourseEnrollment
 from .swagger_schema import course_detail_swagger_schema
 from categories.models import Category
@@ -65,11 +64,11 @@ class SearchView(APIView, PageNumberPagination):
     
     def get_courses(self, request, search_term=None, all=False):
         
-        if all:
-            courses = Course.objects.prefetch_related(
+        courses_queryset = Course.objects.prefetch_related(
                 'tags', 'privacy__shared_with', 'units'
                 ).select_related('privacy').all()
-        else:
+
+        if not all:
             search_query = reduce(
                 operator.or_, (
                     Q(title__icontains=word) | 
@@ -77,11 +76,9 @@ class SearchView(APIView, PageNumberPagination):
                     )
                 )
             
-            courses = Course.objects.prefetch_related(
-                'tags', 'privacy__shared_with', 'units'
-                ).select_related('privacy').filter(search_query)
+            courses_queryset = courses_queryset.filter(search_query)
         
-        courses = self.paginate_queryset(courses, request, view=self)
+        courses = self.paginate_queryset(courses_queryset, request, view=self)
         serializer = CoursesSerializer(courses, many=True, context={'request': request})
         return serializer.data
     
@@ -94,7 +91,7 @@ class SearchView(APIView, PageNumberPagination):
 
         # Sub query of course_activity_queryset
         lectures_queryset = Lecture.objects.filter(
-            topic__in=topics_queryset
+            assigned_topics__topic__in=topics_queryset
             ).values_list('pk')
 
         # Sub query of the main SQL query
@@ -106,8 +103,8 @@ class SearchView(APIView, PageNumberPagination):
 
         # Main SQL Query to execute
         queryset = Unit.objects.annotate(
-            lectures_count=Count('topics__lectures', distinct=True),
-            lectures_duration=Coalesce(Sum('topics__lectures__duration'), 0, output_field=FloatField()),
+            lectures_count=Count('topics__assigned_lectures', distinct=True),
+            lectures_duration=Coalesce(Sum('topics__assigned_lectures__lecture__duration'), 0, output_field=FloatField()),
             num_of_lectures_viewed=general_utils.SQCount(Subquery(course_activity_queryset)),
         )
         
@@ -129,7 +126,7 @@ class SearchView(APIView, PageNumberPagination):
 
         # Sub query of course_activity_queryset
         lectures_queryset = Lecture.objects.filter(
-            topic=OuterRef(OuterRef('pk'))
+            assigned_topics__topic__id=OuterRef(OuterRef('pk'))
             ).values_list('pk')
 
         # Sub query of the main SQL query
@@ -141,8 +138,8 @@ class SearchView(APIView, PageNumberPagination):
 
         # Main SQL Query to execute
         queryset = Topic.objects.annotate(
-            lectures_count=Count('lectures', distinct=True),
-            lectures_duration=Coalesce(Sum('lectures__duration'), 0, output_field=FloatField()),
+            lectures_count=Count('assigned_lectures', distinct=True),
+            lectures_duration=Coalesce(Sum('assigned_lectures__lecture__duration'), 0, output_field=FloatField()),
             num_of_lectures_viewed=general_utils.SQCount(Subquery(course_activity_queryset))
             )
 
@@ -232,6 +229,12 @@ class CourseDetail(APIView):
 
     @course_detail_swagger_schema
     def get(self, request, course_id, format=None):
+        
+        
+        courses = Course.objects.all()
+        units = Unit.objects.filter(course__in=courses)
+        print(units)
+        print(courses)
         course = Course.objects.prefetch_related(
         'privacy__shared_with', 'categories__course_set').select_related('privacy').filter(
             id=course_id
@@ -249,7 +252,7 @@ class CourseIndex(APIView):
         'id': course_id
         }
         prefetch_lectures = Prefetch(
-            'units__topics__lectures',
+            'units__topics__assigned_lectures__lecture',
             queryset=Lecture.objects.select_related(
                 'privacy'
                 ).prefetch_related(
@@ -290,7 +293,10 @@ class LectureDetail(APIView):
                             CourseActivity.objects.filter(lecture=OuterRef('pk'), user=self.request.user, is_finished=True)
                             ),
                 left_off_at=Coalesce(Subquery(CourseActivity.objects.filter(lecture=OuterRef('pk'), user=self.request.user).values('left_off_at')), 0, output_field=FloatField())
-        ).get(**filter_kwargs)
+        ).filter(**filter_kwargs).last()
+        
+        if not lecture:
+            return Response(general_utils.error('not_found'), status=status.HTTP_404_NOT_FOUND)
 
         if lecture.is_allowed_to_access_lecture(request.user):
             serializer = FullLectureSerializer(lecture, many=False, context={'request': request})
@@ -315,21 +321,20 @@ class CourseUnitsList(APIView, PageNumberPagination):
 
         # Sub query of course_activity_queryset
         lectures_queryset = Lecture.objects.filter(
-            topic__in=topics_queryset
+            assigned_topics__topic__in=topics_queryset
             ).values_list('pk')
 
         # Sub query of the main SQL query
         course_activity_queryset = CourseActivity.objects.filter(
-                course=course,
                 user=request.user,
                 lecture__in=lectures_queryset,
                 is_finished=True
-                )
+            )
 
         # Main SQL Query to execute
         units = course.units.annotate(
-            lectures_count=Count('topics__lectures', distinct=True),
-            lectures_duration=Coalesce(Sum('topics__lectures__duration'), 0, output_field=FloatField()),
+            lectures_count=Coalesce(Count('topics__assigned_lectures', distinct=True), 0, output_field=IntegerField()),
+            lectures_duration=Coalesce(Sum('topics__assigned_lectures__lecture__duration'), 0, output_field=FloatField()),
             num_of_lectures_viewed=general_utils.SQCount(Subquery(course_activity_queryset))
             ).order_by("pk")
 
@@ -349,12 +354,11 @@ class UnitDetail(APIView):
 
         # Sub query of course_activity_queryset
         lectures_queryset = Lecture.objects.filter(
-            topic__in=topics_queryset
+            assigned_topics__topic__in=topics_queryset
             ).values_list('pk')
 
         # Sub query of the main SQL query
         course_activity_queryset = CourseActivity.objects.filter(
-            course=OuterRef('course'),
             user=request.user,
             lecture__in=lectures_queryset,
             is_finished=True
@@ -362,8 +366,8 @@ class UnitDetail(APIView):
 
         # Main SQL Query to execute
         unit = Unit.objects.annotate(
-            lectures_count=Count('topics__lectures', distinct=True),
-            lectures_duration=Coalesce(Sum('topics__lectures__duration'), 0, output_field=FloatField()),
+            lectures_count=Count('topics__assigned_lectures', distinct=True),
+            lectures_duration=Coalesce(Sum('topics__assigned_lectures__lecture__duration'), 0, output_field=FloatField()),
             num_of_lectures_viewed=general_utils.SQCount(Subquery(course_activity_queryset))
             ).get(id=unit_id, course__id=course_id)
 
@@ -384,23 +388,22 @@ class TopicList(APIView, PageNumberPagination):
 
         # Sub query of course_activity_queryset
         lectures_queryset = Lecture.objects.filter(
-                                        topic=OuterRef(OuterRef('pk'))
-                                        ).values_list('pk')
+            assigned_topics__topic__id=OuterRef(OuterRef('pk'))
+        ).values_list('pk')
 
         # Sub query of the main SQL query
         course_activity_queryset = CourseActivity.objects.filter(
-                                                    course=unit.course,
-                                                    user=request.user,
-                                                    lecture__in=lectures_queryset,
-                                                    is_finished=True
-                                                    )
+            user=request.user,
+            lecture__in=lectures_queryset,
+            is_finished=True
+        )
 
         # Main SQL Query to execute
-        topics = unit.topics.all().annotate(
-                                    lectures_count=Count('lectures', distinct=True),
-                                    lectures_duration=Coalesce(Sum('lectures__duration'), 0, output_field=FloatField()),
-                                    num_of_lectures_viewed=general_utils.SQCount(Subquery(course_activity_queryset))
-                                    )
+        topics = unit.topics.annotate(
+            lectures_count=Count('assigned_lectures', distinct=True),
+            lectures_duration=Coalesce(Sum('assigned_lectures__lecture__duration'), 0, output_field=FloatField()),
+            num_of_lectures_viewed=general_utils.SQCount(Subquery(course_activity_queryset))
+        )
 
         topics = self.paginate_queryset(topics, request, view=self)
         serializer = TopicsListSerializer(topics, many=True, context={'request': request})
@@ -422,23 +425,22 @@ class TopicDetail(APIView, PageNumberPagination):
 
         # Sub query of course_activity_queryset
         lectures_queryset = Lecture.objects.filter(
-                                        topic=OuterRef(OuterRef('pk'))
-                                        ).values_list('pk')
+            assigned_topics__topic__id=OuterRef(OuterRef('pk'))
+        ).values_list('pk')
 
         # Sub query of the main SQL query
         course_activity_queryset = CourseActivity.objects.filter(
-                                                    course=OuterRef('unit__course'),
-                                                    user=request.user,
-                                                    lecture__in=lectures_queryset,
-                                                    is_finished=True
-                                                    )
+            user=request.user,
+            lecture__in=lectures_queryset,
+            is_finished=True
+        )
 
         # Main SQL Query to execute
         topic = Topic.objects.annotate(
-                                    lectures_count=Count('lectures', distinct=True),
-                                    lectures_duration=Coalesce(Sum('lectures__duration'), 0, output_field=FloatField()),
-                                    num_of_lectures_viewed=general_utils.SQCount(Subquery(course_activity_queryset))
-                                    ).get(id=topic_id, unit__course__id=course_id, unit__id=unit_id)
+            lectures_count=Count('assigned_lectures', distinct=True),
+            lectures_duration=Coalesce(Sum('assigned_lectures__lecture__duration'), 0, output_field=FloatField()),
+            num_of_lectures_viewed=general_utils.SQCount(Subquery(course_activity_queryset))
+        ).get(id=topic_id, unit__course__id=course_id, unit__id=unit_id)
 
         serializer = TopicDetailSerializer(topic, many=False, context={'request': request})
         return Response(serializer.data)
@@ -455,12 +457,13 @@ class LecturesList(APIView, PageNumberPagination):
         if not found:
             return Response(error, status=status.HTTP_404_NOT_FOUND)
 
-        lectures = topic.lectures.select_related('privacy').prefetch_related('privacy__shared_with').annotate(
+        lectures = Lecture.objects.select_related('privacy').prefetch_related('privacy__shared_with').annotate(
                 viewed=Exists(
                             CourseActivity.objects.filter(lecture=OuterRef('pk'), user=self.request.user, is_finished=True)
                             ),
                 left_off_at=Coalesce(Subquery(CourseActivity.objects.filter(lecture=OuterRef('pk'), user=self.request.user).values('left_off_at')), 0, output_field=FloatField())
-        ).all()
+        ).filter(assigned_topics__topic=topic).order_by("assigned_topics__order")
+        
         lectures = self.paginate_queryset(lectures, request, view=self)
         serializer = DemoLectureSerializer(lectures, many=True, context={'request': request})
         return self.get_paginated_response(serializer.data)
@@ -525,7 +528,7 @@ class QuizDetail(APIView):
 
             # Delete previous result of this quiz
             if retake:
-                QuestionResult.objects.filter(user=request.user, quiz=lecture.quiz).delete()
+                QuestionAnswer.objects.filter(user=request.user, quiz=lecture.quiz).delete()
             return Response(serializer.data)
 
         else:
@@ -542,7 +545,7 @@ class QuizDetail(APIView):
 
             # Delete previous result of this quiz
             if retake:
-                QuestionResult.objects.filter(user=request.user, quiz=course.quiz).delete()
+                QuestionAnswer.objects.filter(user=request.user, quiz=course.quiz).delete()
 
             return Response(serializer.data)
 
@@ -576,13 +579,13 @@ class CourseQuizAnswer(APIView):
             except Choice.DoesNotExist:
                 return Response(general_utils.error('not_found'), status=status.HTTP_404_NOT_FOUND)
 
-            answer = QuestionResult(user=request.user, quiz=quiz, question=question, selected_choice=selected_choice, is_correct=selected_choice.is_correct)
+            answer = QuestionAnswer(user=request.user, quiz=quiz, question=question, selected_choice=selected_choice, is_correct=selected_choice.is_correct)
             answers_objs.append(answer)
 
         if not answers_objs:
             return Response(general_utils.error('empty_quiz_answers'), status=status.HTTP_400_BAD_REQUEST)
 
-        QuestionResult.objects.bulk_create(answers_objs)
+        QuestionAnswer.objects.bulk_create(answers_objs)
         return Response(general_utils.success('quiz_answer_submitted'), status=status.HTTP_201_CREATED)
 
 class LectureQuizAnswer(APIView):
@@ -616,18 +619,16 @@ class LectureQuizAnswer(APIView):
             try:
                 question = Question.objects.get(id=answer['question_id'])
                 selected_choice = Choice.objects.get(id=answer['selected_choice_id'], question=question)
-            except Question.DoesNotExist:
+            except (Question.DoesNotExist, Choice.DoesNotExist):
                 return Response(general_utils.error('not_found'), status=status.HTTP_404_NOT_FOUND)
-            except Choice.DoesNotExist:
-                return Response(general_utils.error('not_found'), status=status.HTTP_404_NOT_FOUND)
-
-            answer = QuestionResult(user=request.user, quiz=quiz, question=question, selected_choice=selected_choice)
+            
+            answer = QuestionAnswer(user=request.user, quiz=quiz, question=question, selected_choice=selected_choice)
             answers_objs.append(answer)
 
         if not answers_objs:
             return Response(general_utils.error('empty_quiz_answers'), status=status.HTTP_400_BAD_REQUEST)
 
-        QuestionResult.objects.bulk_create(answers_objs)
+        QuestionAnswer.objects.bulk_create(answers_objs)
         return Response(general_utils.success('quiz_answer_submitted'), status=status.HTTP_201_CREATED)
 
 class CourseQuizResult(APIView):
@@ -918,7 +919,7 @@ class TrackCourseActivity(APIView):
         if not lecture.is_allowed_to_access_lecture(request.user):
             return Response(general_utils.error('access_denied'), status=status.HTTP_403_FORBIDDEN)
 
-        lecture_activity, created = CourseActivity.objects.get_or_create(user=request.user, course=lecture.topic.unit.course, lecture=lecture)
+        lecture_activity, created = CourseActivity.objects.get_or_create(user=request.user, lecture=lecture)
 
         update_fields = []
         if 'left_off_at' in request.data:

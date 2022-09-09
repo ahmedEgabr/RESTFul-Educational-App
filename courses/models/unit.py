@@ -4,6 +4,7 @@ from django.db.models import Count, Sum
 from main.utility_models import UserActionModel, TimeStampedModel
 from courses.models import Lecture
 from alteby.utils import render_alert
+from courses.models.activity import CourseActivity
 
 
 class Unit(UserActionModel, TimeStampedModel):
@@ -42,18 +43,25 @@ class Unit(UserActionModel, TimeStampedModel):
     def get_topics_count(self):
         return self.topics.count()
 
+    def get_lectures(self):
+        lectures_queryset = Lecture.objects.filter(assigned_topics__topic__in=self.topics.all())
+        return lectures_queryset
+    
     def get_lectures_count(self):
-        return self.topics.aggregate(count=Count('lectures'))['count']
+        return self.topics.aggregate(count=Count('assigned_lectures'))['count']
 
     def get_lectures_duration(self):
-        duration = self.topics.aggregate(sum=Sum('lectures__duration'))['sum']
-
+        duration = self.topics.aggregate(sum=Sum('assigned_lectures__lecture__duration'))['sum']
         if not duration:
             duration = 0
         return duration
 
+    def get_lectures_viewed_count(self, user):
+        lectures_queryset = self.get_lectures()
+        lectures_viewed = CourseActivity.objects.filter(lecture__in=lectures_queryset, user=user).count()
+        return lectures_viewed
+
     def is_finished(self, user):
-        topics_ids = self.topics.all().values_list('id', flat=True)
-        lectures = Lecture.objects.filter(topic__in=topics_ids)
-        activity = self.course.activity.filter(user=user, lecture__in=lectures).count()
-        return len(lectures) == activity
+        lectures_viewed_count = self.get_lectures_viewed_count(user=user)
+        return self.get_lectures_count() == lectures_viewed_count
+    

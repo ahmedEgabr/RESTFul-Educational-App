@@ -2,13 +2,12 @@ from django.utils import timezone
 from django.db import models
 from ckeditor.fields import RichTextField
 from django.contrib.contenttypes.models import ContentType
+from courses.models.activity import CourseActivity
 from main.utility_models import UserActionModel
 from courses.managers import CustomCourseManager
 from courses.models.discussion import Discussion
 from courses.models.lecture import Lecture
-from courses.models.topic import Topic
 from courses.models.course_privacy import CoursePrivacy
-from courses.models.activity import CourseActivity
 from courses.models.reference import Reference
 from courses.models.course_pricing_plan import CoursePricingPlan
 from courses.models.course_plan_price import CoursePlanPrice
@@ -43,7 +42,8 @@ class Course(UserActionModel):
 
     @classmethod
     def create_privacy(cls, course):
-        return CoursePrivacy.objects.get_or_create(course=course)
+        course_privacy_settings, created = CoursePrivacy.objects.get_or_create(course=course)
+        return course_privacy_settings
 
     def is_allowed_to_access_course(self, user):
         if not isinstance(user, User):
@@ -71,44 +71,50 @@ class Course(UserActionModel):
         
         return False
 
-
-    def delete_course_activity(self):
-        CourseActivity.objects.filter(course=self).delete()
-        return True
-
     def get_units_count(self):
         return self.units.count()
 
+    def get_lectures(self):
+        lectures_ids = self.units.filter(
+            ~models.Q(topics__assigned_lectures=None)
+            ).values_list(
+                "topics__assigned_lectures__lecture", 
+                flat=True
+        )            
+        lectures_queryset = Lecture.objects.filter(id__in=lectures_ids)
+        return lectures_queryset, lectures_ids
+    
     def get_lectures_count(self):
-        return self.units.aggregate(count=models.Count('topics__lectures'))['count']
+        return self.units.aggregate(count=models.Count('topics__assigned_lectures'))['count']
 
     def get_lectures_duration(self):
-        duration = self.units.aggregate(sum=models.Sum('topics__lectures__duration'))['sum']
+        duration = self.units.aggregate(sum=models.Sum('topics__assigned_lectures__lecture__duration'))['sum']
         if not duration:
             duration = 0
         return duration
 
+    def get_lectures_viewed(self, user):
+        lectures_viewd_count = 0
+        lectures_queryset, lectures_ids = self.get_lectures()
+        lectures_viewed = CourseActivity.objects.filter(lecture__id__in=lectures_ids, user=user)
+        for lecture_activity in lectures_viewed:
+            lectures_viewd_count += list(lectures_ids).count(lecture_activity.lecture.id)
+        return lectures_viewd_count
+
     def is_finished(self, user):
-        lectures = Lecture.objects.filter(topic__unit__course=self)
-        if not lectures:
-            return False
-        activity = self.activity.filter(user=user, lecture__in=lectures).count()
-        return len(lectures) == activity
-
-    def get_lectures(self):
-        course_units_ids = self.units.values_list('id', flat=True)
-        course_topics_ids = Topic.objects.filter(unit__in=course_units_ids).values_list('id', flat=True)
-        lectures = Lecture.objects.filter(topic__in=course_topics_ids)
-        return lectures
-
+        lectures_viewed_count = self.get_lectures_viewed(user=user)
+        return self.get_lectures_count() == lectures_viewed_count
+    
     def get_contributed_teachers(self):
-        teachers_ids_list = self.get_lectures().values_list("teacher", flat=True)
+        lectures_queryset, lectures_ids = self.get_lectures()
+        teachers_ids_list = lectures_queryset.values_list("teacher", flat=True)
         teachers_list = Teacher.objects.filter(user_id__in=teachers_ids_list)
         return teachers_list
 
     @property
     def references(self):
-        references_ids = self.get_lectures().filter(~models.Q(references=None)).values_list("references__id", flat=True)
+        lectures_queryset, lectures_ids = self.get_lectures()
+        references_ids = lectures_queryset.filter(~models.Q(references=None)).values_list("references__id", flat=True)
         if not references_ids:
             return None
         return Reference.objects.filter(id__in=list(references_ids))

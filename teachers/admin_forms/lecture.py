@@ -18,13 +18,10 @@ class LectureForm(forms.ModelForm):
         super(LectureForm, self).__init__(*args, **kwargs)
         self.fields['teacher'].disabled = True
         self.fields['teacher'].initial = get_current_authenticated_user().get_teacher_profile()
-        self.fields['course'].queryset = Course.objects.filter(created_by=get_current_authenticated_user())
 
     class Meta:
         model = Lecture
         fields = (
-        'course',
-        'topic',
         'title',
         'description',
         'objectives',
@@ -40,9 +37,5 @@ class LectureForm(forms.ModelForm):
             'references': autocomplete.ModelSelect2Multiple(
             url='courses:references-autocomplete',
             forward=['reference_category']
-            ),
-            'topic': autocomplete.ModelSelect2(
-            url='courses:topic-autocomplete',
-            forward=['course']
             )
         }

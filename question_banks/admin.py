@@ -1,6 +1,6 @@
 from django.contrib import admin
 from alteby.admin_sites import main_admin
-from .models import Question, Choice, QuestionResult
+from .models import Question, Choice, QuestionAnswer
 
 
 class ChoiceInline(admin.StackedInline):
@@ -24,9 +24,9 @@ class QuestionAdmin(admin.ModelAdmin):
     
     inlines = [ChoiceInline]
     
-@admin.register(QuestionResult, site=main_admin)
-class QuestionResultAdmin(admin.ModelAdmin):
-    model = QuestionResult
+@admin.register(QuestionAnswer, site=main_admin)
+class QuestionAnswerAdmin(admin.ModelAdmin):
+    model = QuestionAnswer
     list_filter = ('user', 'question', 'is_correct', 'selected_choice', 'created_at')
     list_display = ('user', 'question', 'is_correct', 'created_at')
     readonly_fields = ('created_at',)

@@ -1,9 +1,8 @@
 from rest_framework.response import Response
-from rest_framework.decorators import api_view
 from rest_framework.views import APIView
-from .serializers import PlaylistSerializer, FavoriteSerializer, WatchHistorySerializer
+from .serializers import PlaylistSerializer
 from playlists.models import Playlist, Favorite, WatchHistory
-from courses.api.serializers import DemoLectureSerializer, FullLectureSerializer
+from courses.api.serializers import DemoLectureSerializer
 from courses.models import Lecture, CourseActivity
 import courses.utils as utils
 import alteby.utils as general_utils
@@ -52,7 +51,7 @@ class PlaylistDetailDestroy(APIView):
 
         playlist = Playlist.objects.filter(id=playlist_id, user=request.user).first()
         if not playlist:
-            return Response(error, status=status.HTTP_404_NOT_FOUND)
+            return Response(general_utils.error("not_found"), status=status.HTTP_404_NOT_FOUND)
         playlist.delete()
         return Response(general_utils.success("deleted"))
 

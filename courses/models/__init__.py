@@ -1,5 +1,6 @@
 from .course import Course
 from .lecture import Lecture
+from .lecture_overlap import LectureOverlap
 from .lecture_quality import LectureQuality
 from .unit import Unit
 from .topic import Topic

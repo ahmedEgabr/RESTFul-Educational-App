@@ -2,6 +2,7 @@ from pathlib import Path
 import cv2
 from ckeditor.fields import RichTextField
 from django.db import models
+from django.utils import timezone
 from users.models import User
 from alteby.utils import render_alert
 from django.core.exceptions import ValidationError
@@ -12,9 +13,12 @@ from courses.models.lecture_quality import LectureQuality
 from courses.models.discussion import Discussion
 from moviepy.editor import VideoFileClip
 from courses.utils import get_lecture_path
+from payment.models import CourseEnrollment
+from courses.models.activity import CourseActivity
 
 
 class Lecture(UserActionModel, TimeStampedModel):
+    #TODO: remove topic and order and indexes
     topic = models.ForeignKey("courses.Topic", on_delete=models.CASCADE, related_name="lectures")
     title = models.CharField(max_length=100)
     description = RichTextField()
@@ -36,53 +40,22 @@ class Lecture(UserActionModel, TimeStampedModel):
         ]
 
     def __str__(self):
-          return self.title
-
-    def clean_fields(self, **kwargs):
-        if self.__class__.objects.filter(topic=self.topic, order=self.order).exclude(id=self.id).exists():
-            raise ValidationError(
-                {
-                    "order": render_alert(
-                        f"""
-                        Lecture with the same order in topic: {self.topic.title} is already exists.
-                        """,
-                        tag="strong",
-                        error=True  
-                        )
-                }
-            ) 
-        super(Lecture, self).clean_fields(**kwargs)
-
-    def save(self, *args, **kwargs):
-        self.full_clean()
-        return super(Lecture, self).save(*args, **kwargs)
+        return f"ID: {self.id} - {self.title}"
     
     def atomic_post_save(self, sender, created, **kwargs):
         if not hasattr(self, "privacy"):
             self.__class__.create_privacy(self)
 
+    def delete_activity_for_all_users(self):
+        CourseActivity.objects.filter(lecture=self).delete()
+        return True
+    
     @classmethod
     def create_privacy(cls, lecture):
-        course_privacy = lecture.topic.unit.course.privacy
-        lecture_privacy = LecturePrivacy.objects.get_or_create(
+        lecture_privacy_settings, created = LecturePrivacy.objects.get_or_create(
         lecture=lecture,
-        is_downloadable=course_privacy.is_downloadable,
-        is_downloadable_for_enrolled_users_only=course_privacy.is_downloadable_for_enrolled_users_only,
-        is_quiz_available=course_privacy.is_quiz_available,
-        is_quiz_available_for_enrolled_users_only=course_privacy.is_quiz_available_for_enrolled_users_only,
-        is_attachements_available=course_privacy.is_attachements_available,
-        is_attachements_available_for_enrolled_users_only=course_privacy.is_attachements_available_for_enrolled_users_only
         )
-        return lecture_privacy
-
-    def is_allowed_to_access_lecture(self, user):
-        if not isinstance(user, User):
-            return False
-        
-        access_granted = self.check_privacy(user)
-        if access_granted or self.topic.unit.course.is_enrolled(user=user):
-            return True
-        return False
+        return lecture_privacy_settings
     
     def check_privacy(self, user):
         if not hasattr(self, "privacy"):
@@ -100,6 +73,27 @@ class Lecture(UserActionModel, TimeStampedModel):
         elif self.privacy.is_public_for_limited_duration:
             return self.privacy.is_available_during_limited_duration
         
+        return False
+    
+    def is_allowed_to_access_lecture(self, user):
+        if not isinstance(user, User):
+            return False
+        
+        access_granted = self.check_privacy(user)
+        if access_granted:
+            return True
+        
+        courses_ids = self.assigned_topics.values_list("topic__unit__course", flat=True)
+        is_enrolled = CourseEnrollment.objects.filter(
+            models.Q(lifetime_enrollment=True) |
+            models.Q(expiry_date__gt=timezone.now()),
+            course__id__in=courses_ids, 
+            user=user,
+            force_expiry=False,
+            is_active=True
+            ).exists()
+        if is_enrolled:
+            return True
         return False
     
     @property

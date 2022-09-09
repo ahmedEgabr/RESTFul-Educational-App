@@ -13,12 +13,12 @@ class CourseQuerySet(models.QuerySet):
 
     def annotate_lectures_count(self):
         return self.annotate(
-        lectures_count=Count('units__topics__lectures', distinct=True),
+        lectures_count=Count('units__topics__assigned_lectures', distinct=True),
         )
 
     def annotate_course_duration(self):
         from courses.models import Unit
-        course_duration_queryset = Unit.objects.filter(course=OuterRef('pk')).annotate(duration_sum=Sum('topics__lectures__duration')).values('duration_sum')[:1]
+        course_duration_queryset = Unit.objects.filter(course=OuterRef('pk')).annotate(duration_sum=Sum('topics__assigned_lectures__lecture__duration')).values('duration_sum')[:1]
         return self.annotate(
         course_duration=Coalesce(Subquery(course_duration_queryset), 0, output_field=FloatField())
         )

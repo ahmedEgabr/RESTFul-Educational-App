@@ -1,3 +1,4 @@
+from multiprocessing import context
 from rest_framework import serializers
 from rest_framework.fields import CurrentUserDefault
 from django_countries.serializers import CountryFieldMixin
@@ -12,10 +13,8 @@ LectureExternalLink, Reference
 )
 from alteby.utils import seconds_to_duration
 from categories.api.serializers import CategorySerializer, TagSerializer
-from django.db.models import Sum
-from payment.models import CourseEnrollment
 from users.api.serializers import TeacherSerializer, BasicUserSerializer
-from question_banks.models import QuestionResult, Question, Choice
+from question_banks.models import QuestionAnswer, Question, Choice
 
 
 class CoursePathSerializer(serializers.ModelSerializer):
@@ -50,8 +49,8 @@ class LectureIndexSerialiser(serializers.ModelSerializer):
         fields = ('id', 'title', 'can_access')
 
     def get_can_access(self, lecture):
-        user = self.context.get('user', None)
-        return lecture.check_privacy(user) or lecture.is_enrolled
+        user = self.context.get("user", None)
+        return lecture.is_allowed_to_access_lecture(user=user)
 
 
 class TopicIndexSerialiser(serializers.ModelSerializer):
@@ -61,11 +60,15 @@ class TopicIndexSerialiser(serializers.ModelSerializer):
         # We pass the "upper serializer" context to the "nested one"
         self.fields['lectures'].context.update(self.context)
 
-    lectures = LectureIndexSerialiser(many=True, read_only=True)
+    lectures = serializers.SerializerMethodField()
+    
     class Meta:
         model = Topic
         fields = ('id', 'title', 'lectures')
 
+    def get_lectures(self, topic):
+        return LectureIndexSerialiser(topic.get_lectures(), many=True, context={"user": self.context.get("user")}).data
+    
 class UnitIndexSerialiser(serializers.ModelSerializer):
 
     def __init__(self, *args, **kwargs):
@@ -124,11 +127,11 @@ class QuizSerializer(serializers.ModelSerializer):
         model = Quiz
         fields = ('id', 'name', 'description', 'questions')
 
-class BaseQuestionResultSerializer(serializers.ModelSerializer):
+class BaseQuestionAnswerSerializer(serializers.ModelSerializer):
     question = QuestionSerializer(many=False, read_only=True)
     selected_choice = ChoiceSerializer(many=False, read_only=True)
     class Meta:
-        model = QuestionResult
+        model = QuestionAnswer
         fields = ('id', 'question', 'selected_choice', 'is_correct')
 
 class QuizResultSerializer(serializers.ModelSerializer):
@@ -145,7 +148,7 @@ class QuizResultSerializer(serializers.ModelSerializer):
     def get_result(self, quiz):
         user = self.context.get('request', None).user
         # Must select distinct, but it is not supported by SQLite
-        quiz_answers = QuestionResult.objects.select_related(
+        quiz_answers = QuestionAnswer.objects.select_related(
             'question', 'selected_choice'
             ).prefetch_related(
                 'question__choices'
@@ -154,7 +157,7 @@ class QuizResultSerializer(serializers.ModelSerializer):
                     )
                 
         self.num_of_right_answers = quiz_answers.filter(is_correct=True).count()
-        return BaseQuestionResultSerializer(quiz_answers, many=True, read_only=True).data
+        return BaseQuestionAnswerSerializer(quiz_answers, many=True, read_only=True).data
 
     def get_score(self, quiz):
         return (self.num_of_right_answers/self.num_of_questions)*100
@@ -353,6 +356,8 @@ class TopicsListSerializer(serializers.ModelSerializer):
         return TopicPathSerializer(topic).data
     
     def get_progress(self, topic):
+        if not topic.lectures_count:
+            return 0.0
         return round(topic.num_of_lectures_viewed/topic.lectures_count * 100, 2)
 
 
@@ -375,12 +380,14 @@ class TopicDetailSerializer(serializers.ModelSerializer):
         return seconds_to_duration(topic.lectures_duration)
     
     def get_progress(self, topic):
+        if not topic.lectures_count:
+            return 0.0
         return round(topic.num_of_lectures_viewed/topic.lectures_count * 100, 2)
 
 class UnitSerializer(serializers.ModelSerializer):
     lectures_count = serializers.IntegerField()
     lectures_duration = serializers.FloatField()
-    is_finished = serializers.SerializerMethodField('get_activity_status')
+    is_finished = serializers.SerializerMethodField()
     can_access = serializers.SerializerMethodField()
     path = serializers.SerializerMethodField()
     progress = serializers.SerializerMethodField()
@@ -389,7 +396,7 @@ class UnitSerializer(serializers.ModelSerializer):
         model = Unit
         fields = ('id', 'title', 'course', 'order', 'path', 'lectures_duration', 'lectures_count', 'progress', 'is_finished', 'can_access')
 
-    def get_activity_status(self, unit):
+    def get_is_finished(self, unit):
         if not unit.lectures_count:
             return False
         return unit.lectures_count == unit.num_of_lectures_viewed
@@ -402,6 +409,8 @@ class UnitSerializer(serializers.ModelSerializer):
         return unit.course.is_allowed_to_access_course(user=user)
     
     def get_progress(self, unit):
+        if not unit.lectures_count:
+            return 0.0
         return round(unit.num_of_lectures_viewed/unit.lectures_count * 100, 2)
      
     def get_path(self, unit):
@@ -469,17 +478,16 @@ class CourseSerializer(serializers.ModelSerializer, QuerySerializerMixin):
         )
 
     def get_progress(self, course):
-         user = self.context.get('request', None).user
-         content_viewed_count = course.activity.filter(user=user).count()
-
-         content_count = course.get_lectures_count()
-         if not content_count:
-             return 0.0
-         return content_viewed_count/content_count*100
+        user = self.context.get('request', None).user
+        lectures_viewed_count = course.get_lectures_viewed(user=user)
+        lectures_count = course.get_lectures_count()
+        if not lectures_count:
+            return 0.0
+        return lectures_viewed_count/lectures_count*100
 
     def get_enrollment(self, course):
-         user = self.context.get('request', None).user
-         return course.is_enrolled(user=user)
+        user = self.context.get('request', None).user
+        return course.is_enrolled(user=user)
 
     def get_activity_status(self, course):
         user = self.context.get('request', None).user
@@ -538,13 +546,12 @@ class CoursesSerializer(serializers.ModelSerializer, QuerySerializerMixin):
         )
 
     def get_progress(self, course):
-         user = self.context.get('request', None).user
-         content_viewed_count = course.activity.filter(user=user).count()
-
-         content_count = course.get_lectures_count()
-         if not content_count:
-             return 0.0
-         return content_viewed_count/content_count*100
+        user = self.context.get('request', None).user
+        lectures_viewed_count = course.get_lectures_viewed(user=user)
+        lectures_count = course.get_lectures_count()
+        if not lectures_count:
+            return 0.0
+        return lectures_viewed_count/lectures_count*100
 
     def get_enrollment(self, course):
          user = self.context.get('request', None).user

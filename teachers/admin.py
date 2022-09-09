@@ -1,18 +1,19 @@
+import nested_admin
+from django.utils.formats import date_format
+from django.utils import timezone
 from django.contrib import admin
-from django.contrib.contenttypes.models import ContentType
 from django.shortcuts import redirect
 from django.urls import reverse
-from nested_inline.admin import NestedModelAdmin
 from django.db import transaction
 from django.db.models import Q
 from alteby.admin_sites import teacher_admin
 from courses.admin import (
-CourseConfig, CoursePricingPlanConfig, UnitTopicsInline, CourseUnitsInline, CoursePrivacyInline, CourseAttachementsInline,
-LectureAttachementsInline, LecturePrivacyInline, LectureExternalLinkInline, ReplyInline
+CourseConfig, CoursePricingPlanConfig,
+LectureAttachementsInline, LecturePrivacyInline, LectureExternalLinkInline, ReplyInline, LectureOverlapInline
 )
 from courses.models import Course, Lecture, Discussion, Reference, CoursePricingPlan
 from categories.models import Tag, Category, ReferenceCategory
-from .admin_forms import LectureForm, CourseEnrollmentForm, ReferenceForm
+from .admin_forms import LectureForm, ReferenceForm, LectureOverlapForm
 from payment.models import CourseEnrollment
 from payment.admin import CourseEnrollmentConfig
 from .admin_forms import LectureForm, CoursePricingPlanForm
@@ -20,6 +21,9 @@ from courses.tasks import detect_and_convert_lecture_qualities, extract_and_set_
 
 
 
+class LectureOverlapInlineForTeacher(LectureOverlapInline):
+    form = LectureOverlapForm
+    
 @admin.register(CoursePricingPlan, site=teacher_admin)
 class TeacherCoursePricingPlanConfig(CoursePricingPlanConfig):
     form = CoursePricingPlanForm
@@ -51,7 +55,7 @@ class TeacherCourseConfig(CourseConfig):
         return super(CourseConfig, self).response_change(request, obj)
 
 @admin.register(Lecture, site=teacher_admin)
-class LectureConfig(admin.ModelAdmin):
+class LectureConfig(nested_admin.NestedModelAdmin):
     model = Lecture
     form = LectureForm
 
@@ -59,7 +63,7 @@ class LectureConfig(admin.ModelAdmin):
     list_display = ('topic', 'title')
     readonly_fields = ('duration', 'audio', 'created_by', 'updated_by')
 
-    inlines = [LecturePrivacyInline, LectureAttachementsInline, LectureExternalLinkInline]
+    inlines = [LecturePrivacyInline, LectureAttachementsInline, LectureExternalLinkInline, LectureOverlapInlineForTeacher]
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -93,7 +97,7 @@ class LectureConfig(admin.ModelAdmin):
             video_changed = True
 
         if video_changed:
-            new_lecture.topic.unit.course.delete_course_activity()
+            new_lecture.delete_activity_for_all_users()
             new_lecture.delete_qualities()
 
         return new_lecture

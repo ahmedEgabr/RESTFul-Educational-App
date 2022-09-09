@@ -294,7 +294,7 @@ JAZZMIN_SETTINGS = {
         "playlists.WatchHistory": "fas fa-history",
         
         "question_banks.Question": "fas fa-question-circle",
-        "question_banks.QuestionResult": "fas fa-clipboard-check",
+        "question_banks.QuestionAnswer": "fas fa-clipboard-check",
 
         
     },

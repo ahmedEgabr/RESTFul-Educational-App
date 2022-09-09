@@ -5,7 +5,7 @@ from django import forms
 from alteby.admin_sites import main_admin
 from django.db import transaction
 from nested_inline.admin import NestedStackedInline, NestedModelAdmin
-from .admin_forms import LectureForm, LecturePrivacyPriceForm, CoursePlanPriceForm
+from .admin_forms import LectureForm, LecturePrivacyPriceForm, CoursePlanPriceForm, LectureOverlapForm
 from courses.models import (
 Course, CoursePrivacy,
 CourseAttachement,
@@ -23,7 +23,7 @@ Feedback,
 Quiz,
 QuizAttempt,
 Unit,
-Topic,
+Topic, LectureOverlap,
 LectureQuality,
 Note,
 CoursePricingPlan,
@@ -70,6 +70,7 @@ class TopicInlineFormSet(forms.models.BaseInlineFormSet):
         """Check order of each topic"""
         orders = []
         for form in self.forms:
+            print(type(form.instance))
             if form.instance.id:
                 orders.append(form.instance.order)
             elif form.has_changed() and not form.instance.id:
@@ -91,7 +92,20 @@ class TopicInlineFormSet(forms.models.BaseInlineFormSet):
                )
             )
         return super().clean()
-            
+
+
+class LectureOverlapInline(nested_admin.NestedStackedInline):
+    model = LectureOverlap
+    form = LectureOverlapForm
+    exclude = ['created_by', 'updated_by']
+    can_delete = True
+    extra = 0
+    verbose_name = "Topic"
+    verbose_name_plural = 'Assign Lecture to Topics'
+    fk_name = 'lecture'
+    list_select_related = ['topic', 'lecture']
+
+          
 class UnitTopicsInline(nested_admin.NestedStackedInline):
     model = Topic
     exclude = ['created_by', 'updated_by']
@@ -320,7 +334,7 @@ class CourseConfig(nested_admin.NestedModelAdmin):
         return super(CourseConfig, self).response_change(request, obj)
 
 
-class LectureAttachementsInline(admin.StackedInline):
+class LectureAttachementsInline(nested_admin.NestedStackedInline):
     model = LectureAttachement
     exclude = ['created_by', 'updated_by']
     can_delete = True
@@ -333,7 +347,7 @@ class LectureAttachementsInline(admin.StackedInline):
         return qs.select_related("lecture")
 
 
-class LectureQuizInline(admin.StackedInline):
+class LectureQuizInline(nested_admin.NestedStackedInline):
     model = Quiz
     exclude = ['created_by', 'updated_by']
     can_delete = True
@@ -345,7 +359,7 @@ class LectureQuizInline(admin.StackedInline):
         qs = super(LectureQuizInline, self).get_queryset(request)
         return qs.select_related("lecture")
     
-class LecturePrivacyInline(admin.StackedInline):
+class LecturePrivacyInline(nested_admin.NestedStackedInline):
     model = LecturePrivacy
     form = LecturePrivacyPriceForm
     fields = (
@@ -375,7 +389,7 @@ class LecturePrivacyInline(admin.StackedInline):
         return qs.select_related("lecture")
 
 
-class LectureExternalLinkInline(admin.StackedInline):
+class LectureExternalLinkInline(nested_admin.NestedStackedInline):
     model = LectureExternalLink
     exclude = ['created_by', 'updated_by']
     can_delete = True
@@ -389,14 +403,14 @@ class LectureExternalLinkInline(admin.StackedInline):
 
 
 @admin.register(Lecture, site=main_admin)
-class LectureConfig(admin.ModelAdmin):
+class LectureConfig(nested_admin.NestedModelAdmin):
     model = Lecture
     form = LectureForm
     list_filter = ('topic', 'date_created')
     list_display = ('topic', 'title')
     readonly_fields = ('duration', 'audio', 'created_by', 'updated_by')
 
-    inlines = [LecturePrivacyInline, LectureAttachementsInline, LectureExternalLinkInline, LectureQuizInline]
+    inlines = [LecturePrivacyInline, LectureAttachementsInline, LectureExternalLinkInline, LectureQuizInline, LectureOverlapInline]
 
     def save_model(self, request, new_lecture, form, change):
         # Update lecture duration
@@ -424,7 +438,7 @@ class LectureConfig(admin.ModelAdmin):
             video_changed = True
 
         if video_changed:
-            new_lecture.topic.unit.course.delete_course_activity()
+            new_lecture.delete_activity_for_all_users()
             new_lecture.delete_qualities()
 
         return new_lecture
@@ -433,12 +447,12 @@ class LectureConfig(admin.ModelAdmin):
 @admin.register(CourseActivity, site=main_admin)
 class CourseActivityConfig(admin.ModelAdmin):
     model = CourseActivity
-    list_filter = ('user', 'course', 'lecture', 'is_finished')
+    list_filter = ('user', 'lecture', 'is_finished')
     ordering = ('-created_at',)
-    list_display = ('user', 'course', 'lecture', 'is_finished')
+    list_display = ('user', 'lecture', 'is_finished')
 
     fieldsets = (
-        (None, {'fields': ('user', 'course', 'lecture', 'left_off_at', 'is_finished')}),
+        (None, {'fields': ('user', 'lecture', 'left_off_at', 'is_finished')}),
     )
 
 
