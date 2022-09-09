@@ -20,11 +20,15 @@ def pre_save_user(sender, instance=None, created=False, **kwargs):
             instance.delete_teacher_profile()
         if old_instance.is_student != instance.is_student and not instance.is_student:
             instance.delete_student_profile()
+        if old_instance.is_promoter != instance.is_promoter and not instance.is_promoter:
+                instance.remove_from_promoter_group()
+        if old_instance.is_promoter != instance.is_promoter and instance.is_promoter:
+                instance.add_to_promoter_group()
 
     if instance.is_student and not hasattr(instance, 'student_profile'):
         instance.create_student_profile()
     if instance.is_teacher and not hasattr(instance, 'teacher_profile'):
-        instance.create_teacher_profile()
+        instance.create_teacher_profile()        
 
 
 @receiver(post_save, sender=UserModel)

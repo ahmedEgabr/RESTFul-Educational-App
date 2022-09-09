@@ -270,6 +270,7 @@ JAZZMIN_SETTINGS = {
         "users.User": "fas fa-fingerprint",
         "users.Teacher": "fas fa-solid fa-user-tie",
         "users.Student": "fas fa-solid fa-user-graduate",
+        "users.SourceGroup": "fas fa-users",
         
         "main.AppStatus": "fas fa-wifi",
         "main.AppVersion": "fas fa-code-branch",

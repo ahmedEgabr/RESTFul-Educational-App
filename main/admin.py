@@ -1,6 +1,10 @@
 from django.contrib import admin
-from alteby.admin_sites import main_admin
+from django import forms
+from django.utils.formats import date_format
+from django.utils import timezone
+from alteby.admin_sites import main_admin, promoter_admin
 from .models import ContactUs, AppVersion, AppStatus, AppConfiguration
+from payment.models import CourseEnrollment
 
 
 @admin.register(AppConfiguration, site=main_admin)
@@ -84,3 +88,59 @@ class ContactUsConfig(admin.ModelAdmin):
         if is_allowed and self.model.objects.exists():
             is_allowed = False
         return is_allowed
+    
+@admin.register(CourseEnrollment, site=promoter_admin)
+class CourseEnrollmentPromoterAdmin(admin.ModelAdmin):
+    
+    class CourseEnrollmentForm(forms.ModelForm):
+        class Meta:
+            model = CourseEnrollment
+            fields = '__all__'
+            help_texts = {"is_active": None, "force_expiry": None}
+            
+    change_form_template = 'admin/forms/course_enrollment_change_form.html'
+    form = CourseEnrollmentForm
+    list_filter = (
+        'user',
+        'course',
+        'payment_method',
+        'payment_type',
+        'enrollment_duration',
+        'enrollment_duration_type',
+        'lifetime_enrollment',
+        'enrollment_date',
+        "source_group",
+    )
+    ordering = ('-created_at',)
+    list_display = ('user', 'course', 'payment_method', 'payment_type', 'enrollment_date', 'is_expired')
+    readonly_fields = ("created_at", "created_by", "enrollment_date", "expiry_date")
+    fieldsets = (
+        ("Enrollment Information", {'fields':
+        (
+        'user',
+        'course',
+        'payment_method',
+        'payment_type',
+        "source_group",
+        'enrollment_duration',
+        'enrollment_duration_type',
+        'lifetime_enrollment',
+        'enrollment_date',
+        'expiry_date',
+        'force_expiry',
+        'is_active',
+        'created_by'
+        )
+        }),
+    )
+
+
+    def get_queryset(self, request):
+        queryset = super(CourseEnrollmentPromoterAdmin, self).get_queryset(request)
+        return queryset.select_related("course").filter(promoter=request.user)
+    
+    @staticmethod
+    def expiry_date(object):
+        if not object.calculate_expiry_date:
+            return None
+        return date_format(timezone.localtime(object.calculate_expiry_date), 'DATETIME_FORMAT')

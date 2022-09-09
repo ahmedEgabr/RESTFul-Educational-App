@@ -119,7 +119,8 @@ class CourseEnrollmentConfig(CourseEnrollmentConfig):
     'enrollment_date',
     'expiry_date',
     'force_expiry',
-    'is_active'
+    'is_active',
+    'created_by'
     )
     
     def get_queryset(self, request):

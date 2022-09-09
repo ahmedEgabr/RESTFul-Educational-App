@@ -53,6 +53,20 @@ class CourseEnrollment(UserActionModel, TimeStampedModel):
             warning=True
         )
     )
+    source_group = models.ForeignKey(
+        "users.SourceGroup", 
+        null=True, 
+        blank=True, 
+        on_delete=models.CASCADE
+    )
+    promoter = models.ForeignKey(
+        "users.User",
+        null=True, 
+        blank=True,
+        on_delete=models.CASCADE, 
+        related_name="enrollments_contributions",
+        limit_choices_to={"is_promoter": True},
+    )
     is_active = models.BooleanField(default=True, help_text=render_alert(
         message="&#x26A0; When not ckecked, this enrollment will be deactivated.",
         tag="strong",
@@ -103,6 +117,6 @@ class CourseEnrollment(UserActionModel, TimeStampedModel):
             if (old_instance.enrollment_duration != self.enrollment_duration) or (
                 old_instance.enrollment_duration_type != self.enrollment_duration_type
             ): 
-                from .signals.custom_dispatch import enrollment_duration_changed
+                from payment.signals.custom_dispatch import enrollment_duration_changed
                 enrollment_duration_changed.send(sender=type(self), instance=self)
         return super(CourseEnrollment, self).save(*args, **kwargs)

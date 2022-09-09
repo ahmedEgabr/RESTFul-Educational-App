@@ -1,7 +1,7 @@
 from django.contrib import admin
 from alteby.admin_sites import main_admin
 from django.contrib.auth.admin import UserAdmin
-from users.models import User, Student, Teacher
+from users.models import User, Student, Teacher, SourceGroup
 from django.contrib.auth.forms import (
     AdminPasswordChangeForm
 )
@@ -9,12 +9,12 @@ from django.contrib.auth.admin import GroupAdmin
 from django.contrib.auth.models import Group
 from django.contrib import messages
 
-
+    
 class UserConfig(UserAdmin):
     model = User
     change_password_form = AdminPasswordChangeForm
     actions = ["activate_selected_users", "deactivate_selected_users", "block_selected_users"]
-    list_filter = ('email', 'username', 'is_active', 'is_blocked', 'is_staff', 'screenshots_taken')
+    list_filter = ('email', 'username', 'is_active', 'is_blocked', 'is_student', 'is_teacher', 'is_promoter', 'is_superuser', 'is_staff', 'screenshots_taken')
     ordering = ('-date_joined',)
     list_display = ('email', 'username',
                     'is_active', 'is_staff')
@@ -22,7 +22,7 @@ class UserConfig(UserAdmin):
 
     fieldsets = (
         ("User Information", {'fields': ('email', 'username', 'password', 'screenshots_taken')}),
-        ('Permissions', {'fields': ('is_staff', 'is_active', 'is_blocked', 'is_student', 'is_teacher', 'is_superuser', 'groups', 'user_permissions')}),
+        ('Permissions', {'fields': ('is_staff', 'is_active', 'is_blocked', 'is_student', 'is_teacher', 'is_promoter', 'is_superuser', 'groups', 'user_permissions')}),
     )
 
     def activate_selected_users(self, request, queryset):
@@ -88,3 +88,4 @@ main_admin.register(User, UserConfig)
 main_admin.register(Student, StudentConfig)
 main_admin.register(Teacher, TeacherConfig)
 main_admin.register(Group, GroupAdmin)
+main_admin.register(SourceGroup)

@@ -11,21 +11,6 @@ class CourseEnrollmentConfig(admin.ModelAdmin):
     change_form_template = 'admin/forms/course_enrollment_change_form.html'
 
     list_filter = (
-    'user',
-    'course',
-    'payment_method',
-    'payment_type',
-    'enrollment_duration',
-    'enrollment_duration_type',
-    'lifetime_enrollment',
-    'enrollment_date',
-    )
-    ordering = ('-created_at',)
-    list_display = ('user', 'course', 'payment_method', 'payment_type', 'enrollment_date', 'is_expired')
-    readonly_fields = ("created_at", "enrollment_date", "expiry_date")
-    fieldsets = (
-        ("Enrollment Information", {'fields':
-        (
         'user',
         'course',
         'payment_method',
@@ -34,15 +19,36 @@ class CourseEnrollmentConfig(admin.ModelAdmin):
         'enrollment_duration_type',
         'lifetime_enrollment',
         'enrollment_date',
+        "source_group",
+        "promoter"
+    )
+    ordering = ('-created_at',)
+    list_display = ('user', 'course', 'payment_method', 'payment_type', 'enrollment_date', 'is_expired')
+    readonly_fields = ("created_at", "created_by", "enrollment_date", "expiry_date")
+    fieldsets = (
+        ("Enrollment Information", {'fields':
+        (
+        'user',
+        'course',
+        'payment_method',
+        'payment_type',
+        "source_group",
+        "promoter",
+        'enrollment_duration',
+        'enrollment_duration_type',
+        'lifetime_enrollment',
+        'enrollment_date',
         'expiry_date',
         'force_expiry',
-        'is_active'
+        'is_active',
+        'created_by'
         )
         }),
     )
-
+    
     @staticmethod
     def expiry_date(object):
         if not object.calculate_expiry_date:
             return None
         return date_format(timezone.localtime(object.calculate_expiry_date), 'DATETIME_FORMAT')
+    

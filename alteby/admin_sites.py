@@ -30,6 +30,7 @@ class MainAdminConfig(AdminConfig):
 
 main_admin = MainAdmin(name="admin")
 
+
 class TeacherAdmin(AdminSite):
     site_header = ("Teacher Panel")
     site_title = ("Teacher Panel")
@@ -59,3 +60,31 @@ class TeacherAdmin(AdminSite):
 
 
 teacher_admin = TeacherAdmin(name="teacher_admin")
+
+
+class PromoterAdmin(AdminSite):
+    site_header = ("Promoter Panel")
+    site_title = ("Promoter Panel")
+    index_title = ("Emtyaz Advizor Teacher Panel")
+    enable_nav_sidebar = True
+
+    def has_permission(self, request):
+        """
+        Return True if the given HttpRequest has permission to view
+        *at least one* page in the admin site.
+        """
+        user = request.user
+
+        if hasattr(user, "is_blocked"):
+            if user.is_blocked:
+                return False
+
+        if not user.is_active:
+            return False
+
+        if not request.user.is_promoter:
+            return False
+        return True
+
+
+promoter_admin = PromoterAdmin(name="promoter_admin")

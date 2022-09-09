@@ -1,17 +1,17 @@
 from django.db import models, transaction
 from django.utils import timezone
 from django.core.validators import MinValueValidator
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, BaseUserManager, PermissionsMixin
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.contrib.auth.validators import UnicodeUsernameValidator
-from django.conf import settings
-from django.db.models import F, Q
+from django.db.models import Q
 from django.db import transaction
 from django.contrib.auth.models import Group
-from alteby.constants import TEACHER_GROUP, STUDENT_GROUP
+from alteby.constants import TEACHER_GROUP, STUDENT_GROUP, PROMOTER_GROUP
 from main.models import AppConfiguration
 from users.managers import UserManager
 from django_countries.fields import CountryField
-
+from .student import Student
+from .teacher import Teacher
 
 # Account Model
 class User(AbstractBaseUser, PermissionsMixin):
@@ -26,6 +26,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField('Staff status', default=False)
     is_teacher = models.BooleanField('Teacher status', default=False)
     is_student = models.BooleanField('Student status', default=False)
+    is_promoter = models.BooleanField('Promoter status', default=False)
     screenshots_taken = models.IntegerField(
     blank=True, null=True, default=0, validators=[MinValueValidator(0)], verbose_name="Screenshots Taken"
     )
@@ -90,7 +91,18 @@ class User(AbstractBaseUser, PermissionsMixin):
             return True
         return False
 
-
+    def add_to_promoter_group(self):
+        promoter_group, created = Group.objects.get_or_create(name=PROMOTER_GROUP)
+        transaction.on_commit(lambda: self.groups.add(promoter_group))
+        return True
+    
+    def remove_from_promoter_group(self):
+        promoter_group = Group.objects.filter(name=PROMOTER_GROUP).first()
+        if not promoter_group:
+            return False
+        transaction.on_commit(lambda: self.groups.remove(promoter_group))
+        return True
+    
     def create_student_profile(self):
         if self.is_student and not hasattr(self, "student_profile"):
             student_profile = Student.objects.create(user=self)
@@ -98,7 +110,7 @@ class User(AbstractBaseUser, PermissionsMixin):
             transaction.on_commit(lambda: self.groups.add(student_group))
             return student_profile
         return None
-
+    
     def delete_student_profile(self):
         if hasattr(self, "student_profile"):
             self.student_profile.delete()
@@ -182,79 +194,3 @@ class User(AbstractBaseUser, PermissionsMixin):
         
         from courses.models.course import Course
         return Course.objects.filter(id__in=enrolled_courses_ids)
-
-class Student(models.Model):
-
-    YEAR_IN_SCHOOL_CHOICES = [
-        ('FR', 'Freshman'),
-        ('SO', 'Sophomore'),
-        ('JR', 'Junior'),
-        ('SR', 'Senior'),
-        ('GR', 'Graduate'),
-    ]
-    ACADEMIC_YEAR = [
-        (1, 'First'),
-        (2, 'Second'),
-        (3, 'Third'),
-        (4, 'Fourth'),
-        (5, 'Fifth'),
-        (6, 'Sixth'),
-        (7, 'Seventh'),
-    ]
-    user = models.OneToOneField(
-    settings.AUTH_USER_MODEL,
-    on_delete=models.CASCADE,
-    primary_key=True,
-    related_name="student_profile"
-    )
-    major = models.CharField(blank=True, null=True, max_length=40)
-    academic_year = models.IntegerField(blank=True, null=True, choices=ACADEMIC_YEAR)
-    year_in_school = models.CharField(max_length=20, blank=True, null=True, choices=YEAR_IN_SCHOOL_CHOICES)
-    is_active = models.BooleanField(default=True)
-
-    def __str__(self):
-        return self.user.email
-
-    def is_enrolled(self, course):
-        return course.id in self.user.enrollments.values_list('course', flat=True)
-
-    def activate(self):
-        if not self.is_active:
-            self.is_active = False
-            self.save()
-
-    def deactivate(self):
-        self.is_active = False
-        self.save()
-
-class Teacher(models.Model):
-    user = models.OneToOneField(
-    settings.AUTH_USER_MODEL,
-    on_delete=models.CASCADE,
-    primary_key=True,
-    related_name="teacher_profile"
-    )
-    major = models.CharField(blank=True, max_length=40)
-    is_active = models.BooleanField(default=True)
-
-    def __str__(self):
-        return self.user.email
-
-    def activate(self):
-        if not self.is_active:
-            self.is_active = False
-            self.save()
-
-    def deactivate(self):
-        self.is_active = False
-        self.save()
-
-
-# Model to store the list of logged in users
-class LoggedInUser(models.Model):
-    user = models.OneToOneField(User, related_name='logged_in_user', on_delete=models.CASCADE)
-    # Session keys are 32 characters long
-    session_key = models.CharField(max_length=32, null=True, blank=True)
-
-    def __str__(self):
-        return self.user.username
