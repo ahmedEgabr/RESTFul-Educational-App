@@ -54,15 +54,15 @@ urlpatterns = [
   path('<int:course_id>/units/<int:unit_id>/topics/<int:topic_id>/lectures/<int:lecture_id>/external_links', LectureExternalLinksList.as_view(), name='external_links'),
   path('<int:course_id>/units/<int:unit_id>/topics/<int:topic_id>/lectures/<int:lecture_id>/references', LectureReferenceList.as_view(), name='lecture-references'),
 
-  # Lectures API
-  path('<int:course_id>/lectures/', LecturesList.as_view(), name='lectures'), # DEPRECATED
-  path('<int:course_id>/lectures/<int:lectures_id>', LectureDetail.as_view(), name='lectures'), # DEPRECATED
-  path('<int:course_id>/lectures/<int:lectures_id>/mark_as_read', TrackCourseActivity.as_view(), name='mark_as_read'), # DEPRECATED
-  path('<int:course_id>/lectures/<int:lectures_id>/discussions', LectureDiscussions.as_view(), name='lectures_discussions'), # DEPRECATED
-  path('<int:course_id>/lectures/<int:lectures_id>/quiz', QuizDetail.as_view(), name='lectures_quiz'), # DEPRECATED
-  path('<int:course_id>/lectures/<int:lectures_id>/quiz/result', LectureQuizResult.as_view(), name='lectures_quiz_result'), # DEPRECATED
-  path('<int:course_id>/lectures/<int:lectures_id>/quiz/answer', LectureQuizAnswer.as_view(), name='lectures_quiz_answer'), # DEPRECATED
-  path('<int:course_id>/lectures/<int:lectures_id>/attachements', LectureAttachement.as_view(), name='lectures_attachment'), # DEPRECATED
+  # # Lectures API
+  # path('<int:course_id>/lectures/', LecturesList.as_view(), name='lectures'), # DEPRECATED
+  # path('<int:course_id>/lectures/<int:lectures_id>', LectureDetail.as_view(), name='lectures'), # DEPRECATED
+  # path('<int:course_id>/lectures/<int:lectures_id>/mark_as_read', TrackCourseActivity.as_view(), name='mark_as_read'), # DEPRECATED
+  # path('<int:course_id>/lectures/<int:lectures_id>/discussions', LectureDiscussions.as_view(), name='lectures_discussions'), # DEPRECATED
+  # path('<int:course_id>/lectures/<int:lectures_id>/quiz', QuizDetail.as_view(), name='lectures_quiz'), # DEPRECATED
+  # path('<int:course_id>/lectures/<int:lectures_id>/quiz/result', LectureQuizResult.as_view(), name='lectures_quiz_result'), # DEPRECATED
+  # path('<int:course_id>/lectures/<int:lectures_id>/quiz/answer', LectureQuizAnswer.as_view(), name='lectures_quiz_answer'), # DEPRECATED
+  # path('<int:course_id>/lectures/<int:lectures_id>/attachements', LectureAttachement.as_view(), name='lectures_attachment'), # DEPRECATED
 
 
 ]

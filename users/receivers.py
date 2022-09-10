@@ -11,6 +11,11 @@ from django.contrib.auth import user_logged_in, user_logged_out
 
 UserModel = settings.AUTH_USER_MODEL
 
+@receiver(post_save, sender=UserModel)
+def create_auth_token(sender, instance=None, created=False, **kwargs):
+    if created:
+        Token.objects.create(user=instance)
+        
 @receiver(pre_save, sender=UserModel)
 def pre_save_user(sender, instance=None, created=False, **kwargs):
 

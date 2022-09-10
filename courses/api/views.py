@@ -4,6 +4,7 @@ from rest_framework.decorators import api_view
 from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
+from alteby.permissions import CoursePermission
 from rest_framework import status
 from django.utils import timezone
 from users.api.serializers import TeacherSerializer
@@ -16,7 +17,7 @@ QuizResultSerializer, AttachementSerializer,
 DiscussionSerializer, FeedbackSerializer,
 LectureExternalLinkSerializer, ReferenceSerializer, CoursePricingPlanSerializer
 )
-from courses.models import Course, Unit, Topic, CourseActivity, Lecture, Discussion, Feedback
+from courses.models import Course, Unit, Topic, CourseActivity, Lecture, Discussion, Feedback, Privacy
 from question_banks.models import Question, Choice, QuestionAnswer
 from playlists.models import WatchHistory
 from functools import reduce
@@ -32,7 +33,7 @@ from payment.models import CourseEnrollment
 from .swagger_schema import course_detail_swagger_schema
 from categories.models import Category
 from categories.api.serializers import CategorySerializer
-
+from django_currentuser.middleware import get_current_authenticated_user
 
 class SearchView(APIView, PageNumberPagination):
     
@@ -59,14 +60,15 @@ class SearchView(APIView, PageNumberPagination):
         else:            
             result = getattr(self, "get_%s" % search_type, None)(request, search_term)
         return self.get_paginated_response(result)
-        
-
     
     def get_courses(self, request, search_term=None, all=False):
         
         courses_queryset = Course.objects.prefetch_related(
                 'tags', 'privacy__shared_with', 'units'
-                ).select_related('privacy').all()
+                ).select_related('privacy').filter(is_active=True).exclude(
+                    Q(privacy__option=Privacy.PRIVACY_CHOICES.shared) &
+                    ~Q(privacy__shared_with__in=[get_current_authenticated_user()])
+            )
 
         if not all:
             search_query = reduce(
@@ -106,6 +108,9 @@ class SearchView(APIView, PageNumberPagination):
             lectures_count=Count('topics__assigned_lectures', distinct=True),
             lectures_duration=Coalesce(Sum('topics__assigned_lectures__lecture__duration'), 0, output_field=FloatField()),
             num_of_lectures_viewed=general_utils.SQCount(Subquery(course_activity_queryset)),
+        ).filter(course__is_active=True).exclude(
+            Q(course__privacy__option=Privacy.PRIVACY_CHOICES.shared) &
+            ~Q(course__privacy__shared_with__in=[get_current_authenticated_user()])
         )
         
         if all:
@@ -141,7 +146,10 @@ class SearchView(APIView, PageNumberPagination):
             lectures_count=Count('assigned_lectures', distinct=True),
             lectures_duration=Coalesce(Sum('assigned_lectures__lecture__duration'), 0, output_field=FloatField()),
             num_of_lectures_viewed=general_utils.SQCount(Subquery(course_activity_queryset))
-            )
+            ).filter(unit__course__is_active=True).exclude(
+            Q(unit__course__privacy__option=Privacy.PRIVACY_CHOICES.shared) &
+            ~Q(unit__course__privacy__shared_with__in=[get_current_authenticated_user()])
+        )
 
         if all:
             topics = queryset.all()
@@ -163,7 +171,10 @@ class SearchView(APIView, PageNumberPagination):
                                 CourseActivity.objects.filter(lecture=OuterRef('pk'), user=self.request.user, is_finished=True)
                                 ),
                     left_off_at=Coalesce(Subquery(CourseActivity.objects.filter(lecture=OuterRef('pk'), user=request.user).values('left_off_at')), 0, output_field=FloatField())
-            )
+            ).filter(assigned_topics__topic__unit__course__is_active=True).exclude(
+            Q(assigned_topics__topic__unit__course__privacy__option=Privacy.PRIVACY_CHOICES.shared) &
+            ~Q(assigned_topics__topic__unit__course__privacy__shared_with__in=[get_current_authenticated_user()])
+        )
         if all:
             lectures = queryset.all()
         else:
@@ -203,7 +214,12 @@ class CourseList(ListAPIView):
 
     def get_queryset(self):
         request_params = self.request.GET
-        queryset = Course.objects.prefetch_related('tags', 'privacy__shared_with', 'units').select_related('privacy').all()
+        queryset = Course.objects.prefetch_related(
+            'tags', 'privacy__shared_with', 'units'
+            ).select_related('privacy').filter(is_active=True).exclude(
+                Q(privacy__option=Privacy.PRIVACY_CHOICES.shared) &
+                ~Q(privacy__shared_with__in=[self.request.user])
+            )
         if 'q' in request_params:
             search_query = request_params.get('q').split(" ")
             query = reduce(operator.or_, (Q(title__icontains=search_term) | Q(description__icontains=search_term) for search_term in search_query))
@@ -219,26 +235,29 @@ class FeaturedCoursesList(ListAPIView):
 
     def get_queryset(self):
         queryset = Course.objects.prefetch_related(
-        'tags', 'privacy__shared_with').select_related('privacy').filter(featured=True)
+        'tags', 'privacy__shared_with').select_related('privacy').filter(
+            featured=True, 
+            is_active=True
+        ).exclude(
+            Q(privacy__option=Privacy.PRIVACY_CHOICES.shared) &
+            ~Q(privacy__shared_with__in=[self.request.user])
+        )
 
         serializer = self.get_serializer()
         return serializer.get_related_queries(queryset)
 
 
 class CourseDetail(APIView):
-
+    permission_classes = (IsAuthenticated, CoursePermission)
     @course_detail_swagger_schema
     def get(self, request, course_id, format=None):
-        
-        
-        courses = Course.objects.all()
-        units = Unit.objects.filter(course__in=courses)
-        print(units)
-        print(courses)
+
         course = Course.objects.prefetch_related(
         'privacy__shared_with', 'categories__course_set').select_related('privacy').filter(
-            id=course_id
-        ).get(id=course_id)
+            id=course_id, is_active=True
+        ).last()
+        if not course:
+            return Response(general_utils.error('not_found'), status=status.HTTP_404_NOT_FOUND)
 
         serializer = CourseSerializer(course, many=False, context={'request': request})
         return Response(serializer.data)
@@ -249,7 +268,8 @@ class CourseIndex(APIView):
     def get(self, request, course_id, format=None):
 
         filter_kwargs = {
-        'id': course_id
+            'id': course_id,
+            'is_active': True
         }
         prefetch_lectures = Prefetch(
             'units__topics__assigned_lectures__lecture',
@@ -279,13 +299,14 @@ class CourseIndex(APIView):
 
 
 class LectureDetail(APIView):
-
+    permission_classes = (IsAuthenticated, CoursePermission)
     def get(self, request, course_id, unit_id, topic_id, lecture_id, format=None):
         filter_kwargs = {
-        'id': lecture_id,
-        'topic__id': topic_id,
-        'topic__unit__id': unit_id,
-        'topic__unit__course__id': course_id
+            'id': lecture_id,
+            'assigned_topics__topic__id': topic_id,
+            'assigned_topics__topic__unit__id': unit_id,
+            'assigned_topics__topic__unit__course__id': course_id,
+            'assigned_topics__topic__unit__course__is_active': True,
         }
 
         lecture = Lecture.objects.select_related('privacy').prefetch_related('privacy__shared_with').annotate(
@@ -308,6 +329,7 @@ class LectureDetail(APIView):
 
 
 class CourseUnitsList(APIView, PageNumberPagination):
+    permission_classes = (IsAuthenticated, CoursePermission)
     def get(self, request, course_id, format=None):
 
         course, found, error = utils.get_course(course_id)
@@ -336,7 +358,7 @@ class CourseUnitsList(APIView, PageNumberPagination):
             lectures_count=Coalesce(Count('topics__assigned_lectures', distinct=True), 0, output_field=IntegerField()),
             lectures_duration=Coalesce(Sum('topics__assigned_lectures__lecture__duration'), 0, output_field=FloatField()),
             num_of_lectures_viewed=general_utils.SQCount(Subquery(course_activity_queryset))
-            ).order_by("pk")
+            ).filter(course__is_active=True).order_by("pk")
 
         units = self.paginate_queryset(units, request, view=self)
         serializer = UnitSerializer(units, many=True, context={'request': request})
@@ -344,7 +366,7 @@ class CourseUnitsList(APIView, PageNumberPagination):
 
 
 class UnitDetail(APIView):
-
+    permission_classes = (IsAuthenticated, CoursePermission)
     def get(self, request, course_id, unit_id, format=None):
 
         # Sub query of lectures_queryset
@@ -369,17 +391,18 @@ class UnitDetail(APIView):
             lectures_count=Count('topics__assigned_lectures', distinct=True),
             lectures_duration=Coalesce(Sum('topics__assigned_lectures__lecture__duration'), 0, output_field=FloatField()),
             num_of_lectures_viewed=general_utils.SQCount(Subquery(course_activity_queryset))
-            ).get(id=unit_id, course__id=course_id)
+            ).filter(id=unit_id, course__id=course_id, course__is_active=True).last()
 
         serializer = UnitSerializer(unit, many=False, context={'request': request})
         return Response(serializer.data)
 
 class TopicList(APIView, PageNumberPagination):
-
+    permission_classes = (IsAuthenticated, CoursePermission)
     def get(self, request, course_id, unit_id, format=None):
         filter_kwargs = {
-        'id': unit_id,
-        'course__id': course_id
+            'id': unit_id,
+            'course__id': course_id,
+            'course__is_active':True
         }
         unit, found, error = utils.get_object(model=Unit, filter_kwargs=filter_kwargs)
         if not found:
@@ -403,7 +426,7 @@ class TopicList(APIView, PageNumberPagination):
             lectures_count=Count('assigned_lectures', distinct=True),
             lectures_duration=Coalesce(Sum('assigned_lectures__lecture__duration'), 0, output_field=FloatField()),
             num_of_lectures_viewed=general_utils.SQCount(Subquery(course_activity_queryset))
-        )
+        ).filter(unit__course__is_active=True)
 
         topics = self.paginate_queryset(topics, request, view=self)
         serializer = TopicsListSerializer(topics, many=True, context={'request': request})
@@ -411,17 +434,14 @@ class TopicList(APIView, PageNumberPagination):
 
 
 class TopicDetail(APIView, PageNumberPagination):
-
+    permission_classes = (IsAuthenticated, CoursePermission)
     def get(self, request, course_id, unit_id, topic_id, format=None):
         filter_kwargs = {
-        'id': topic_id,
-        'unit__course__id': course_id,
-        'unit__id': unit_id
+            'id': topic_id,
+            'unit__course__id': course_id,
+            'unit__id': unit_id,
+            'unit__course__is_active': True
         }
-
-        topic, found, error = utils.get_object(model=Topic, filter_kwargs=filter_kwargs)
-        if not found:
-            return Response(error, status=status.HTTP_404_NOT_FOUND)
 
         # Sub query of course_activity_queryset
         lectures_queryset = Lecture.objects.filter(
@@ -440,29 +460,29 @@ class TopicDetail(APIView, PageNumberPagination):
             lectures_count=Count('assigned_lectures', distinct=True),
             lectures_duration=Coalesce(Sum('assigned_lectures__lecture__duration'), 0, output_field=FloatField()),
             num_of_lectures_viewed=general_utils.SQCount(Subquery(course_activity_queryset))
-        ).get(id=topic_id, unit__course__id=course_id, unit__id=unit_id)
+        ).filter(**filter_kwargs).last()
+        
+        if not topic:
+            return Response(general_utils.error('not_found'), status=status.HTTP_404_NOT_FOUND)
 
         serializer = TopicDetailSerializer(topic, many=False, context={'request': request})
         return Response(serializer.data)
 
 class LecturesList(APIView, PageNumberPagination):
-
+    permission_classes = (IsAuthenticated, CoursePermission)
     def get(self, request, course_id, unit_id, topic_id, format=None):
-        filter_kwargs = {
-        'id': topic_id,
-        'unit__course__id': course_id,
-        'unit__id': unit_id
-        }
-        topic, found, error = utils.get_object(model=Topic, filter_kwargs=filter_kwargs)
-        if not found:
-            return Response(error, status=status.HTTP_404_NOT_FOUND)
 
         lectures = Lecture.objects.select_related('privacy').prefetch_related('privacy__shared_with').annotate(
                 viewed=Exists(
                             CourseActivity.objects.filter(lecture=OuterRef('pk'), user=self.request.user, is_finished=True)
                             ),
                 left_off_at=Coalesce(Subquery(CourseActivity.objects.filter(lecture=OuterRef('pk'), user=self.request.user).values('left_off_at')), 0, output_field=FloatField())
-        ).filter(assigned_topics__topic=topic).order_by("assigned_topics__order")
+        ).filter(
+            assigned_topics__topic__id=topic_id,
+            assigned_topics__topic__unit__course__id=course_id,
+            assigned_topics__topic__unit__id=unit_id,
+            assigned_topics__topic__unit__course__is_active=True
+            ).order_by("assigned_topics__order")
         
         lectures = self.paginate_queryset(lectures, request, view=self)
         serializer = DemoLectureSerializer(lectures, many=True, context={'request': request})
@@ -478,26 +498,28 @@ class CourseTreeLecturesList(APIView, PageNumberPagination):
             return Response(error, status=status.HTTP_400_BAD_REQUEST)
 
         filter_kwargs = {
-        'id': course_id
+            'id': course_id
         }
         course, found, error = utils.get_object(model=Course, filter_kwargs=filter_kwargs)
         if not found:
             return Response(error, status=status.HTTP_404_NOT_FOUND)
 
-        lectures = Lecture.objects.select_related('privacy').prefetch_related('privacy__shared_with').filter(
-        id__in=lectures_ids, topic__unit__course__id=course_id
-        ).annotate(
-                viewed=Exists(
-                            CourseActivity.objects.filter(lecture=OuterRef('pk'), user=self.request.user, is_finished=True)
-                            ),
-                left_off_at=Coalesce(Subquery(CourseActivity.objects.filter(lecture=OuterRef('pk'), user=self.request.user).values('left_off_at')), 0, output_field=FloatField())
+        lectures = Lecture.objects.select_related('privacy').prefetch_related('privacy__shared_with').annotate(
+            viewed=Exists(
+                        CourseActivity.objects.filter(lecture=OuterRef('pk'), user=self.request.user, is_finished=True)
+                        ),
+            left_off_at=Coalesce(Subquery(CourseActivity.objects.filter(lecture=OuterRef('pk'), user=self.request.user).values('left_off_at')), 0, output_field=FloatField())
+        ).filter(
+        id__in=lectures_ids, 
+        assigned_topics__topic__unit__course__id=course_id,
+        assigned_topics__topic__unit__course__is_active=True
         )
         lectures = self.paginate_queryset(lectures, request, view=self)
         serializer = DemoLectureSerializer(lectures, many=True, context={'request': request})
         return self.get_paginated_response(serializer.data)
 
 class QuizDetail(APIView):
-
+    permission_classes = (IsAuthenticated, CoursePermission)
     def get(self, request, course_id, unit_id=None, topic_id=None, lecture_id=None, format=None):
 
         request_params = self.request.GET
@@ -507,10 +529,11 @@ class QuizDetail(APIView):
 
         if lecture_id:
             filter_kwargs = {
-            'id': lecture_id,
-            'topic__id': topic_id,
-            'topic__unit__id': unit_id,
-            'topic__unit__course__id': course_id
+                'id': lecture_id,
+                'assigned_topics__topic__id': topic_id,
+                'assigned_topics__topic__unit__id': unit_id,
+                'assigned_topics__topic__unit__course__id': course_id,
+                'assigned_topics__topic__unit__course__is_active': True
             }
             lecture, found, error = utils.get_object(model=Lecture, filter_kwargs=filter_kwargs, select_related=['quiz'])
             if not found:
@@ -532,8 +555,11 @@ class QuizDetail(APIView):
             return Response(serializer.data)
 
         else:
-
-            course, found, error = utils.get_course(course_id, select_related=['quiz'], prefetch_related=['quiz__questions__choices'])
+            filter_kwargs = {
+                'id': course_id,
+                'is_active': True
+            }
+            course, found, error = utils.get_object(model=Course, filter_kwargs=filter_kwargs, select_related=['quiz'], prefetch_related=['quiz__questions__choices'])
             if not found:
                 return Response(error, status=status.HTTP_404_NOT_FOUND)
 
@@ -550,7 +576,7 @@ class QuizDetail(APIView):
             return Response(serializer.data)
 
 class CourseQuizAnswer(APIView):
-
+    permission_classes = (IsAuthenticated, CoursePermission)
     @transaction.atomic
     def put(self, request, course_id, format=None):
 
@@ -560,7 +586,11 @@ class CourseQuizAnswer(APIView):
 
         quiz_answers = request_body['quiz_answers']
 
-        course, found, error = utils.get_course(course_id)
+        filter_kwargs = {
+            'id': course_id,
+            'is_active': True
+        }
+        course, found, error = utils.get_object(model=Course, filter_kwargs=filter_kwargs)
         if not found:
             return Response(error, status=status.HTTP_404_NOT_FOUND)
 
@@ -570,7 +600,6 @@ class CourseQuizAnswer(APIView):
 
         answers_objs = []
         for answer in quiz_answers:
-            user = request.user
             try:
                 question = Question.objects.get(id=answer['question_id'])
                 selected_choice = Choice.objects.get(id=answer['selected_choice_id'], question=question)
@@ -589,7 +618,7 @@ class CourseQuizAnswer(APIView):
         return Response(general_utils.success('quiz_answer_submitted'), status=status.HTTP_201_CREATED)
 
 class LectureQuizAnswer(APIView):
-
+    permission_classes = (IsAuthenticated, CoursePermission)
     @transaction.atomic
     def put(self, request, course_id, unit_id, topic_id, lecture_id, format=None):
 
@@ -600,10 +629,10 @@ class LectureQuizAnswer(APIView):
         quiz_answers = request_body['quiz_answers']
 
         filter_kwargs = {
-        'id': lecture_id,
-        'topic__id': topic_id,
-        'topic__unit__id': unit_id,
-        'topic__unit__course__id': course_id
+            'id': lecture_id,
+            'topic__id': topic_id,
+            'topic__unit__id': unit_id,
+            'topic__unit__course__id': course_id
         }
         lecture, found, error = utils.get_object(model=Lecture, filter_kwargs=filter_kwargs, select_related=['quiz'])
         if not found:
@@ -632,10 +661,14 @@ class LectureQuizAnswer(APIView):
         return Response(general_utils.success('quiz_answer_submitted'), status=status.HTTP_201_CREATED)
 
 class CourseQuizResult(APIView):
-
+    permission_classes = (IsAuthenticated, CoursePermission)
     def get(self, request, course_id):
 
-        course, found, error = utils.get_course(course_id, prefetch_related=['quiz__questions'], select_related=['quiz'])
+        filter_kwargs = {
+            'id': course_id,
+            'is_active': True
+        }
+        course, found, error = utils.get_object(model=Course, filter_kwargs=filter_kwargs, prefetch_related=['quiz__questions'], select_related=['quiz'])
         if not found:
             return Response(error, status=status.HTTP_404_NOT_FOUND)
 
@@ -648,14 +681,14 @@ class CourseQuizResult(APIView):
 
 
 class LectureQuizResult(APIView):
-
+    permission_classes = (IsAuthenticated, CoursePermission)
     def get(self, request, course_id, unit_id, topic_id, lecture_id):
 
         filter_kwargs = {
-        'id': lecture_id,
-        'topic__id': topic_id,
-        'topic__unit__id': unit_id,
-        'topic__unit__course__id': course_id
+            'id': lecture_id,
+            'topic__id': topic_id,
+            'topic__unit__id': unit_id,
+            'topic__unit__course__id': course_id
         }
         lecture, found, error = utils.get_object(model=Lecture, filter_kwargs=filter_kwargs)
         if not found:
@@ -669,10 +702,13 @@ class LectureQuizResult(APIView):
         return Response(serializer.data)
 
 class CourseAttachement(APIView):
-
+    permission_classes = (IsAuthenticated, CoursePermission)
     def get(self, request, course_id, format=None):
-
-        course, found, error = utils.get_course(course_id)
+        filter_kwargs = {
+            'id': course_id,
+            'is_active': True
+        }
+        course, found, error = utils.get_object(model=Course, filter_kwargs=filter_kwargs)
         if not found:
             return Response(error, status=status.HTTP_404_NOT_FOUND)
 
@@ -685,14 +721,15 @@ class CourseAttachement(APIView):
         return Response(general_utils.error('access_denied'), status=status.HTTP_403_FORBIDDEN)
 
 class LectureAttachement(APIView):
-
+    permission_classes = (IsAuthenticated, CoursePermission)
     def get(self, request, course_id, unit_id, topic_id, lecture_id, format=None):
 
         filter_kwargs = {
-        'id': lecture_id,
-        'topic__id': topic_id,
-        'topic__unit__id': unit_id,
-        'topic__unit__course__id': course_id
+            'id': lecture_id,
+            'assigned_topics__topic__id': topic_id,
+            'assigned_topics__topic__unit__id': unit_id,
+            'assigned_topics__topic__unit__course__id': course_id,
+            'assigned_topics__topic__unit__course__is_active': True
         }
         lecture, found, error = utils.get_object(model=Lecture, filter_kwargs=filter_kwargs)
         if not found:
@@ -707,14 +744,15 @@ class LectureAttachement(APIView):
 
 
 class LectureExternalLinksList(APIView):
-
+    permission_classes = (IsAuthenticated, CoursePermission)
     def get(self, request, course_id, unit_id, topic_id, lecture_id, format=None):
 
         filter_kwargs = {
-        'id': lecture_id,
-        'topic__id': topic_id,
-        'topic__unit__id': unit_id,
-        'topic__unit__course__id': course_id
+            'id': lecture_id,
+            'assigned_topics__topic__id': topic_id,
+            'assigned_topics__topic__unit__id': unit_id,
+            'assigned_topics__topic__unit__course__id': course_id,
+            'assigned_topics__topic__unit__course__is_active': True
         }
         lecture, found, error = utils.get_object(model=Lecture, filter_kwargs=filter_kwargs)
         if not found:
@@ -729,14 +767,15 @@ class LectureExternalLinksList(APIView):
 
 
 class LectureReferenceList(APIView):
-
+    permission_classes = (IsAuthenticated, CoursePermission)
     def get(self, request, course_id, unit_id, topic_id, lecture_id, format=None):
 
         filter_kwargs = {
-        'id': lecture_id,
-        'topic__id': topic_id,
-        'topic__unit__id': unit_id,
-        'topic__unit__course__id': course_id
+            'id': lecture_id,
+            'assigned_topics__topic__id': topic_id,
+            'assigned_topics__topic__unit__id': unit_id,
+            'assigned_topics__topic__unit__course__id': course_id,
+            'assigned_topics__topic__unit__course__is_active': True
         }
         lecture, found, error = utils.get_object(model=Lecture, filter_kwargs=filter_kwargs)
         if not found:
@@ -751,11 +790,12 @@ class LectureReferenceList(APIView):
 
 
 class CourseReferenceList(APIView):
-
+    permission_classes = (IsAuthenticated, CoursePermission)
     def get(self, request, course_id, format=None):
 
         filter_kwargs = {
-        'id': course_id,
+            'id': course_id,
+            'is_active': True
         }
         course, found, error = utils.get_object(model=Course, filter_kwargs=filter_kwargs)
         if not found:
@@ -770,11 +810,12 @@ class CourseReferenceList(APIView):
 
 
 class CourseTeachersList(APIView):
-
+    permission_classes = (IsAuthenticated, CoursePermission)
     def get(self, request, course_id, format=None):
 
         filter_kwargs = {
-        'id': course_id,
+            'id': course_id,
+            'is_active': True
         }
         course, found, error = utils.get_object(model=Course, filter_kwargs=filter_kwargs)
         if not found:
@@ -789,21 +830,31 @@ class CourseTeachersList(APIView):
 
 
 class CourseDiscussions(APIView):
+    permission_classes = (IsAuthenticated, CoursePermission)
     def get(self, request, course_id, format=None):
 
-        course, found, error = utils.get_course(course_id)
+        filter_kwargs = {
+            'id': course_id,
+            'is_active': True
+        }
+        course, found, error = utils.get_object(model=Course, filter_kwargs=filter_kwargs)
         if not found:
             return Response(error, status=status.HTTP_404_NOT_FOUND)
-            discussions = course.discussions.all()
-            serializer = DiscussionSerializer(discussions, many=True, context={'request': request})
-            return Response(serializer.data)
+        
+        discussions = course.discussions.all()
+        serializer = DiscussionSerializer(discussions, many=True, context={'request': request})
+        return Response(serializer.data)
 
         return Response(general_utils.error('access_denied'), status=status.HTTP_403_FORBIDDEN)
 
 
     def post(self, request, course_id, format=None):
 
-        course, found, error = utils.get_course(course_id)
+        filter_kwargs = {
+            'id': course_id,
+            'is_active': True
+        }
+        course, found, error = utils.get_object(model=Course, filter_kwargs=filter_kwargs)
         if not found:
             return Response(error, status=status.HTTP_404_NOT_FOUND)
 
@@ -821,13 +872,15 @@ class CourseDiscussions(APIView):
 
 
 class LectureDiscussions(APIView, PageNumberPagination):
+    permission_classes = (IsAuthenticated, CoursePermission)
     def get(self, request, course_id, unit_id, topic_id, lecture_id, format=None):
 
         filter_kwargs = {
-        'id': lecture_id,
-        'topic__id': topic_id,
-        'topic__unit__id': unit_id,
-        'topic__unit__course__id': course_id
+            'id': lecture_id,
+            'assigned_topics__topic__id': topic_id,
+            'assigned_topics__topic__unit__id': unit_id,
+            'assigned_topics__topic__unit__course__id': course_id,
+            'assigned_topics__topic__unit__course__is_active': True
         }
         lecture, found, error = utils.get_object(model=Lecture, filter_kwargs=filter_kwargs, prefetch_related=['privacy'])
         if not found:
@@ -843,10 +896,11 @@ class LectureDiscussions(APIView, PageNumberPagination):
 
     def post(self, request, course_id, unit_id, topic_id, lecture_id, format=None):
         filter_kwargs = {
-        'id': lecture_id,
-        'topic__id': topic_id,
-        'topic__unit__id': unit_id,
-        'topic__unit__course__id': course_id
+            'id': lecture_id,
+            'assigned_topics__topic__id': topic_id,
+            'assigned_topics__topic__unit__id': unit_id,
+            'assigned_topics__topic__unit__course__id': course_id,
+            'assigned_topics__topic__unit__course__is_active': True
         }
         lecture, found, error = utils.get_object(model=Lecture, filter_kwargs=filter_kwargs)
         if not found:
@@ -867,9 +921,13 @@ class LectureDiscussions(APIView, PageNumberPagination):
 
 
 class CourseFeedbacks(APIView, PageNumberPagination):
-
+    permission_classes = (IsAuthenticated, CoursePermission)
     def get(self, request, course_id, format=None):
-        course, found, error = utils.get_course(course_id)
+        filter_kwargs = {
+            'id': course_id,
+            'is_active': True
+        }
+        course, found, error = utils.get_object(model=Course, filter_kwargs=filter_kwargs)
         if not found:
             return Response(error, status=status.HTTP_404_NOT_FOUND)
 
@@ -880,7 +938,11 @@ class CourseFeedbacks(APIView, PageNumberPagination):
 
 
     def post(self, request, course_id, format=None):
-        course, found, error = utils.get_course(course_id)
+        filter_kwargs = {
+            'id': course_id,
+            'is_active': True
+        }
+        course, found, error = utils.get_object(model=Course, filter_kwargs=filter_kwargs)
         if not found:
             return Response(error, status=status.HTTP_404_NOT_FOUND)
 
@@ -904,13 +966,14 @@ class CourseFeedbacks(APIView, PageNumberPagination):
 
 
 class TrackCourseActivity(APIView):
-
+    permission_classes = (IsAuthenticated, CoursePermission)
     def post(self, request, course_id, unit_id, topic_id, lecture_id, format=None):
         filter_kwargs = {
-        'id': lecture_id,
-        'topic__id': topic_id,
-        'topic__unit__id': unit_id,
-        'topic__unit__course__id': course_id
+            'id': lecture_id,
+            'assigned_topics__topic__id': topic_id,
+            'assigned_topics__topic__unit__id': unit_id,
+            'assigned_topics__topic__unit__course__id': course_id,
+            'assigned_topics__topic__unit__course__is_active': True
         }
         lecture, found, error = utils.get_object(model=Lecture, filter_kwargs=filter_kwargs)
         if not found:
@@ -954,7 +1017,8 @@ class CoursePricingPlanList(APIView, PageNumberPagination):
     def get(self, request, course_id):
         
         filter_kwargs = {
-        'id': course_id,
+            'id': course_id,
+            'is_active': True
         }
         course, found, error = utils.get_object(model=Course, filter_kwargs=filter_kwargs)
         if not found:
@@ -967,9 +1031,11 @@ class CoursePricingPlanList(APIView, PageNumberPagination):
     
 
 class CourseEnrollmentView(APIView):
+    
     def get(self, request, course_id):
         filter_kwargs = {
             'id': course_id,
+            'is_active': True
         }
         course, found, error = utils.get_object(model=Course, filter_kwargs=filter_kwargs, select_related=["privacy"])
         if not found:

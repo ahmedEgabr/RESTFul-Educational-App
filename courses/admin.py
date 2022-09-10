@@ -70,7 +70,6 @@ class TopicInlineFormSet(forms.models.BaseInlineFormSet):
         """Check order of each topic"""
         orders = []
         for form in self.forms:
-            print(type(form.instance))
             if form.instance.id:
                 orders.append(form.instance.order)
             elif form.has_changed() and not form.instance.id:
@@ -295,6 +294,7 @@ class CourseConfig(nested_admin.NestedModelAdmin):
         'categories',
         'tags',
         'featured',
+        'is_active',
         'is_free',
         'created_by',
         'updated_by'
@@ -407,8 +407,15 @@ class LectureConfig(nested_admin.NestedModelAdmin):
     model = Lecture
     form = LectureForm
     list_filter = ('topic', 'date_created')
-    list_display = ('topic', 'title')
+    list_display = (
+        'title', 
+        'teacher',
+        'duration',
+        'created_at',
+        'created_by'
+    )
     readonly_fields = ('duration', 'audio', 'created_by', 'updated_by')
+    list_select_related = ["created_by", "updated_by", "teacher"]
 
     inlines = [LecturePrivacyInline, LectureAttachementsInline, LectureExternalLinkInline, LectureQuizInline, LectureOverlapInline]
 

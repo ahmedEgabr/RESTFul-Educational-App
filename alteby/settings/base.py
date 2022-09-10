@@ -103,7 +103,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # 'admin_reorder.middleware.ModelAdminReorder',
-    'alteby.middleware.CoursePermissionMiddleware',
+    # 'alteby.middleware.CoursePermissionMiddleware',
     'alteby.middlewares.TimezoneMiddleware',
     'django_currentuser.middleware.ThreadLocalUserMiddleware',
 
@@ -166,8 +166,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework.authentication.BasicAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
+        # 'rest_framework.authentication.BasicAuthentication',
+        # 'rest_framework.authentication.SessionAuthentication',
         'alteby.authentication.CustomTokenAuth',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
@@ -204,7 +204,9 @@ SITE_HEADER = 'Emtyaz Advoisor'
 
 BASE_PROTECTED_ROUTE ='api'
 PROTECTED_ROUTE = 'courses'
-ALLOWED_COURSE_ROUTES = ('index')
+COURSE_PERMISSION_WHITELIST_ROUTES = (
+    "/index"
+)
 #
 # import django_heroku
 # django_heroku.settings(locals())

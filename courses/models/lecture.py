@@ -19,7 +19,7 @@ from courses.models.activity import CourseActivity
 
 class Lecture(UserActionModel, TimeStampedModel):
     #TODO: remove topic and order and indexes
-    topic = models.ForeignKey("courses.Topic", on_delete=models.CASCADE, related_name="lectures")
+    topic = models.ForeignKey("courses.Topic", on_delete=models.CASCADE, null=True, blank=True, related_name="lectures")
     title = models.CharField(max_length=100)
     description = RichTextField()
     objectives = RichTextField(blank=True, null=True)
@@ -27,7 +27,7 @@ class Lecture(UserActionModel, TimeStampedModel):
     audio = models.FileField(upload_to='audio', blank=True, null=True)
     script = RichTextField(blank=True, null=True, max_length=100)
     duration = models.FloatField(blank=True, default=0)
-    order = models.IntegerField()
+    order = models.IntegerField(null=True, blank=True)
     references = models.ManyToManyField("courses.Reference", blank=True)
     teacher = models.ForeignKey("users.Teacher", blank=True, null=True, on_delete=models.CASCADE, related_name="contributed_lectures")
     date_created = models.DateTimeField(auto_now_add=True)
@@ -44,16 +44,15 @@ class Lecture(UserActionModel, TimeStampedModel):
     
     def atomic_post_save(self, sender, created, **kwargs):
         if not hasattr(self, "privacy"):
-            self.__class__.create_privacy(self)
+            self.create_privacy()
 
     def delete_activity_for_all_users(self):
         CourseActivity.objects.filter(lecture=self).delete()
         return True
     
-    @classmethod
-    def create_privacy(cls, lecture):
+    def create_privacy(self):
         lecture_privacy_settings, created = LecturePrivacy.objects.get_or_create(
-        lecture=lecture,
+        lecture=self,
         )
         return lecture_privacy_settings
     

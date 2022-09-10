@@ -29,7 +29,7 @@ class Course(UserActionModel):
     tags = models.ManyToManyField("categories.Tag", blank=True)
     language = models.CharField(choices=Languages.choices, default=Languages.arabic, max_length=20)
     is_free = models.BooleanField(default=True)
-    is_active = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
 
     objects = CustomCourseManager()
 
@@ -38,11 +38,10 @@ class Course(UserActionModel):
 
     def atomic_post_save(self, sender, created, **kwargs):
         if not hasattr(self, "privacy"):
-            self.__class__.create_privacy(self)
+            self.create_privacy()
 
-    @classmethod
-    def create_privacy(cls, course):
-        course_privacy_settings, created = CoursePrivacy.objects.get_or_create(course=course)
+    def create_privacy(self):
+        course_privacy_settings, created = CoursePrivacy.objects.get_or_create(course=self)
         return course_privacy_settings
 
     def is_allowed_to_access_course(self, user):
@@ -232,7 +231,7 @@ class Course(UserActionModel):
             created = CourseEnrollment.objects.create(
                 user=user,
                 course=self,
-                payment_type=CourseEnrollment.PAYMENT_TYPES.free,
+                payment_type=CourseEnrollment.PAYMENT_TYPES.FREE,
                 enrollment_duration=self.privacy.enrollment_duration,
                 enrollment_duration_type=self.privacy.enrollment_duration_type
             )
@@ -240,7 +239,7 @@ class Course(UserActionModel):
             created = CourseEnrollment.objects.create(
                 user=user,
                 course=self,
-                payment_type=CourseEnrollment.PAYMENT_TYPES.free,
+                payment_type=CourseEnrollment.PAYMENT_TYPES.FREE,
                 lifetime_enrollment=True
             )
         
