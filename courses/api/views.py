@@ -332,7 +332,7 @@ class CourseUnitsList(APIView, PageNumberPagination):
         
         # Sub query of lectures_queryset
         topics_queryset = Topic.objects.filter(
-            unit=OuterRef(OuterRef(OuterRef('pk')))
+            unit=OuterRef(OuterRef('pk'))
             ).values_list('pk')
 
         # Sub query of course_activity_queryset
@@ -343,7 +343,7 @@ class CourseUnitsList(APIView, PageNumberPagination):
         # Sub query of the main SQL query
         course_activity_queryset = CourseActivity.objects.filter(
                 user=request.user,
-                lecture__in=lectures_queryset,
+                lecture__assigned_topics__topic__in=topics_queryset,
                 is_finished=True
             )
 
@@ -365,7 +365,7 @@ class UnitDetail(APIView):
 
         # Sub query of lectures_queryset
         topics_queryset = Topic.objects.filter(
-            unit=OuterRef(OuterRef(OuterRef('pk')))
+            unit=OuterRef(OuterRef('pk'))
             ).values_list('pk')
 
         # Sub query of course_activity_queryset
@@ -376,7 +376,7 @@ class UnitDetail(APIView):
         # Sub query of the main SQL query
         course_activity_queryset = CourseActivity.objects.filter(
             user=request.user,
-            lecture__in=lectures_queryset,
+            lecture__assigned_topics__topic__in=topics_queryset,
             is_finished=True
             )
 

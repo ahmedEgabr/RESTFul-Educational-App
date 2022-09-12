@@ -79,10 +79,7 @@ def get_resolution(quality):
 def get_lecture_path(instance, filename):
     today = datetime.today().strftime("%d-%m-%Y")
 
-    return 'videos/course-{0}/unit-{1}/topic-{2}/{3}/{4}'.format(
-    instance.topic.unit.course.id,
-    instance.topic.unit.id,
-    instance.topic.id,
+    return 'videos/lectures/{0}/{1}'.format(
     today,
     filename
     )
