@@ -2,6 +2,7 @@ from django.utils import timezone
 from django.db import models
 from ckeditor.fields import RichTextField
 from django.contrib.contenttypes.models import ContentType
+from courses.models.abstract_privacy import Privacy
 from courses.models.activity import CourseActivity
 from main.utility_models import UserActionModel
 from courses.managers import CustomCourseManager
@@ -246,4 +247,22 @@ class Course(UserActionModel):
         if not created:
             return False
         return True
+    
+    @classmethod
+    def get_allowed_courses(cls, user):
+        return Course.objects.exclude(
+            models.Q(privacy__option=Privacy.PRIVACY_CHOICES.shared) &
+            ~models.Q(privacy__shared_with__in=[user]) &
+            ~(
+                (
+                    models.Q(enrollments__lifetime_enrollment=True) |
+                    models.Q(enrollments__expiry_date__gt=timezone.now())
+                ) & 
+                models.Q(enrollments__user=user) &
+                models.Q(enrollments__force_expiry=False) &
+                models.Q(enrollments__is_active=True) |
+                models.Q(is_active=True)
+            )
+            
+        )
         

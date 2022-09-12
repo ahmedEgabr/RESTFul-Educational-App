@@ -13,14 +13,8 @@ class CoursePermission(BasePermission):
     def has_permission(self, request, view):
         request_path = request.path[:-1] if request.path[-1] == "/" else request.path
         course_id = request_path.split("/")[3]
-        
-        course = Course.objects.filter(
-            id=course_id,
-            is_active=True
-        ).exclude(
-            Q(privacy__option=Privacy.PRIVACY_CHOICES.shared) &
-            ~Q(privacy__shared_with__in=[request.user])
-        ).first()
+        allowed_courses = Course.get_allowed_courses(user=request.user)
+        course = allowed_courses.filter(id=course_id).first()
         if not course:
             return False
         
