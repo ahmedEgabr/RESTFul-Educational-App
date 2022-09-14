@@ -14,7 +14,7 @@ class Command(BaseCommand):
         enrollments = CourseEnrollment.objects.all()
         for enrollment in enrollments:
             enrollment.enrollment_duration = 2
-            enrollment. enrollment_duration_type = DateFormat.years
+            enrollment.enrollment_duration_type = DateFormat.years
             enrollment.save()
         self.stdout.write(self.style.SUCCESS("Done."))
         

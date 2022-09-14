@@ -12,20 +12,20 @@ from alteby.utils import render_alert
 class CourseEnrollment(UserActionModel, TimeStampedModel):
 
     PAYMENT_METHODS = Choices(
-        ('ONLINE', 'Online'),
-        ('OFFLINE', 'Offline'),
+        ('online', 'Online'),
+        ('offline', 'Offline'),
     )
 
     PAYMENT_TYPES = Choices(
-        ('TELEGRAM', 'Telegram'),
-        ('FAWRY', 'Fawry'),
-        ('VISA', 'Visa'),
-        ('FREE', 'Free'),
+        ('telegram', 'Telegram'),
+        ('fawry', 'Fawry'),
+        ('visa', 'Visa'),
+        ('free', 'Free'),
     )
     user = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name='enrollments')
     course = models.ForeignKey("courses.Course", on_delete=models.CASCADE, related_name='enrollments')
-    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS, default=PAYMENT_METHODS.ONLINE)
-    payment_type = models.CharField(max_length=20, choices=PAYMENT_TYPES, default=PAYMENT_TYPES.FREE)
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS, default=PAYMENT_METHODS.online)
+    payment_type = models.CharField(max_length=20, choices=PAYMENT_TYPES, default=PAYMENT_TYPES.free)
 
     lifetime_enrollment = models.BooleanField(default=False)
     enrollment_duration = models.IntegerField(
