@@ -198,9 +198,9 @@ DJANGO_REST_PASSWORDRESET_TOKEN_CONFIG = {
 DJANGO_REST_MULTITOKENAUTH_RESET_TOKEN_EXPIRY_TIME = 1 # Time in hours
 
 # Django Admin
-SITE_INDEX_TITLE = 'Emtyaz Advoisor'
+SITE_INDEX_TITLE = 'Medical Mentor'
 SITE_TITLE = 'Administration'
-SITE_HEADER = 'Emtyaz Advoisor'
+SITE_HEADER = 'Medical Mentor'
 
 BASE_PROTECTED_ROUTE ='api'
 PROTECTED_ROUTE = 'courses'
@@ -238,19 +238,19 @@ CKEDITOR_CONFIGS = {
 
 JAZZMIN_SETTINGS = {
     # title of the window (Will default to current_admin_site.site_title if absent or None)
-    "site_title": "Emtyaz Advoisor",
+    "site_title": "Medical Mentor",
 
     # Title on the login screen (19 chars max) (defaults to current_admin_site.site_header if absent or None)
-    "site_header": "Emtyaz Advoisor",
+    "site_header": "Medical Mentor",
 
     # Title on the brand (19 chars max) (defaults to current_admin_site.site_header if absent or None)
-    "site_brand": "Emtyaz Advoisor",
+    "site_brand": "Medical Mentor",
 
     # Welcome text on the login screen
-    "welcome_sign": "Emtyaz Advisor Administration",
+    "welcome_sign": "Medical Mentor Administration",
 
     # Copyright on the footer
-    "copyright": "Emtyaz Advisor",
+    "copyright": "Medical Mentor",
 
     # The model admin to search from the search bar, search bar omitted if excluded
     "search_model": "users.User",

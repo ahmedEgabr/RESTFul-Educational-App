@@ -34,7 +34,7 @@ main_admin = MainAdmin(name="admin")
 class TeacherAdmin(AdminSite):
     site_header = ("Teacher Panel")
     site_title = ("Teacher Panel")
-    index_title = ("Emtyaz Advizor Teacher Panel")
+    index_title = ("Medical Mentor Teacher Panel")
     enable_nav_sidebar = True
 
     def has_permission(self, request):
@@ -65,7 +65,7 @@ teacher_admin = TeacherAdmin(name="teacher_admin")
 class PromoterAdmin(AdminSite):
     site_header = ("Promoter Panel")
     site_title = ("Promoter Panel")
-    index_title = ("Emtyaz Advizor Teacher Panel")
+    index_title = ("Medical Mentor Teacher Panel")
     enable_nav_sidebar = True
 
     def has_permission(self, request):
