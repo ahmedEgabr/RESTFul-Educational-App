@@ -28,18 +28,18 @@ def pre_save_user(sender, instance=None, created=False, **kwargs):
         if old_instance.is_promoter != instance.is_promoter and not instance.is_promoter:
                 instance.remove_from_promoter_group()
         if old_instance.is_promoter != instance.is_promoter and instance.is_promoter:
-                instance.add_to_promoter_group()
-
-    if instance.is_student and not hasattr(instance, 'student_profile'):
-        instance.create_student_profile()
-    if instance.is_teacher and not hasattr(instance, 'teacher_profile'):
-        instance.create_teacher_profile()        
+                instance.add_to_promoter_group()   
 
 
 @receiver(post_save, sender=UserModel)
 def post_save_user(sender, instance=None, created=False, **kwargs):
     if instance.is_reached_screenshots_limit:
         instance.block()
+    
+    if instance.is_student and not hasattr(instance, 'student_profile'):
+        instance.create_student_profile()
+    if instance.is_teacher and not hasattr(instance, 'teacher_profile'):
+        instance.create_teacher_profile()     
 
 @receiver(user_logged_in)
 def on_user_logged_in(sender, request, **kwargs):

@@ -19,7 +19,6 @@ class LectureForm(forms.ModelForm):
             'teacher',
             'reference_category',
             'references',
-            'order'
         )
         widgets = {
             'references': autocomplete.ModelSelect2Multiple(

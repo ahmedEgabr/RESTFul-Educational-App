@@ -4,7 +4,6 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.contrib import admin
 from model_utils import Choices
-from django.conf import settings
 from main.utility_models import UserActionModel, TimeStampedModel, DateFormat
 from alteby.utils import render_alert
 
@@ -75,8 +74,20 @@ class CourseEnrollment(UserActionModel, TimeStampedModel):
     )
 
     def clean_fields(self, **kwargs):
-        if self.force_expiry:
+        if self.force_expiry or not self.is_active:
             return None
+        
+        # check previous enrollments
+        is_enrolled = self.__class__.objects.filter(
+            models.Q(lifetime_enrollment=True) |
+            models.Q(expiry_date__gt=timezone.now()),
+            course=self.course, 
+            user=self.user,
+            force_expiry=False,
+            is_active=True
+            ).exclude(id=self.id).exists()
+        if is_enrolled:
+            raise ValidationError(f"User: {self.user} already has an active enrollment on Course: {self.course}.")
         
         if not self.enrollment_duration and self.enrollment_duration_type and not self.lifetime_enrollment:
             raise ValidationError({"enrollment_duration": "This field is required"})

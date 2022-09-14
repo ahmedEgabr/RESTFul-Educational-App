@@ -59,9 +59,7 @@ class LectureConfig(nested_admin.NestedModelAdmin):
     model = Lecture
     form = LectureForm
 
-    list_filter = ('topic', 'date_created')
-    list_display = ('topic', 'title')
-    readonly_fields = ('duration', 'audio', 'created_by', 'updated_by')
+    readonly_fields = ('duration', 'audio', 'order', 'created_by', 'updated_by')
 
     inlines = [LecturePrivacyInline, LectureAttachementsInline, LectureExternalLinkInline, LectureOverlapInlineForTeacher]
 

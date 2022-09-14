@@ -406,7 +406,7 @@ class LectureExternalLinkInline(nested_admin.NestedStackedInline):
 class LectureConfig(nested_admin.NestedModelAdmin):
     model = Lecture
     form = LectureForm
-    list_filter = ('topic', 'date_created')
+    list_filter = ('title', 'date_created')
     list_display = (
         'title', 
         'teacher',
