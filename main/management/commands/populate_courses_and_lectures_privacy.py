@@ -12,11 +12,11 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         courses = Course.objects.filter(privacy=None)
         for course in courses:
-            Course.create_privacy(course=course)
+            course.create_privacy()
         
         lectures = Lecture.objects.filter(privacy=None)
         for lecture in lectures:
-            Lecture.create_privacy(lecture=lecture)
+            lecture.create_privacy()
                 
         self.stdout.write(self.style.SUCCESS("Done."))
         
