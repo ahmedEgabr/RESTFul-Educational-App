@@ -229,23 +229,13 @@ class Course(UserActionModel):
             return True
         
         if self.privacy.is_public_for_limited_duration:
-            created = CourseEnrollment.objects.create(
+            CourseEnrollment.objects.create(
                 user=user,
                 course=self,
                 payment_type=CourseEnrollment.PAYMENT_TYPES.FREE,
                 enrollment_duration=self.privacy.enrollment_duration,
                 enrollment_duration_type=self.privacy.enrollment_duration_type
             )
-        else:
-            created = CourseEnrollment.objects.create(
-                user=user,
-                course=self,
-                payment_type=CourseEnrollment.PAYMENT_TYPES.FREE,
-                lifetime_enrollment=True
-            )
-        
-        if not created:
-            return False
         return True
     
     @classmethod
