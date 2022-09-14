@@ -8,7 +8,7 @@ CourseActivity,
 Lecture, LectureQuality, CoursePrivacy, CoursePricingPlan, CoursePlanPrice,
 LecturePrivacy,
 Quiz,
-Attachement, Discussion, Reply, Feedback,
+CourseAttachement, LectureAttachement, Discussion, Reply, Feedback,
 LectureExternalLink, Reference
 )
 from alteby.utils import seconds_to_duration
@@ -35,10 +35,14 @@ class TopicPathSerializer(serializers.ModelSerializer):
         fields = ('id', 'title', 'unit')
         
 class LecturePathSerializer(serializers.ModelSerializer):
-    topic = TopicPathSerializer(many=False, read_only=True)
+    topic = serializers.SerializerMethodField()
     class Meta:
         model = Lecture
         fields = ('id', 'title', 'topic')
+    
+    def get_topic(self, lecture):
+        topic = Topic.objects.get(id=self.context.get("topic_id"))
+        return TopicPathSerializer(topic, many=False, read_only=True).data
         
 class LectureIndexSerialiser(serializers.ModelSerializer):
 
@@ -98,11 +102,16 @@ class FeedbackSerializer(serializers.ModelSerializer):
         model = Feedback
         fields = '__all__'
 
-class AttachementSerializer(serializers.ModelSerializer):
+class CourseAttachementSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Attachement
+        model = CourseAttachement
         fields = '__all__'
-
+        
+class LectureAttachementSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LectureAttachement
+        fields = '__all__'
+        
 class ReferenceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Reference
@@ -163,7 +172,7 @@ class QuizResultSerializer(serializers.ModelSerializer):
         return (self.num_of_right_answers/self.num_of_questions)*100
 
     def get_questions_count(self, quiz):
-        self.num_of_questions = quiz.questions.count()
+        self.num_of_questions = quiz.get_questions_count()
         return self.num_of_questions
 
 class CoursePrivacySerializer(serializers.ModelSerializer):
@@ -259,10 +268,11 @@ class DemoLectureSerializer(serializers.ModelSerializer):
     def get_has_script(self, lecture):
         return True if lecture.script else False
     
-    from collections import OrderedDict
-
     def get_path(self, lecture):
-        return LecturePathSerializer(lecture).data
+        topic_id = self.context.get("topic_id")
+        if not topic_id:
+            topic_id = lecture.assigned_topics.first().topic_id
+        return LecturePathSerializer(lecture, context={"topic_id": topic_id}).data
 
 class LectureQualitySerializer(serializers.ModelSerializer):
     quality = serializers.SerializerMethodField()
@@ -312,7 +322,10 @@ class FullLectureSerializer(DemoLectureSerializer):
         return lecture.course.id
     
     def get_path(self, lecture):
-        return LecturePathSerializer(lecture).data
+        topic_id = self.context.get("topic_id")
+        if not topic_id:
+            topic_id = lecture.assigned_topics.first().topic_id
+        return LecturePathSerializer(lecture, context={"topic_id": topic_id}).data
 
 class QuerySerializerMixin(object):
     PREFETCH_FIELDS = [] # Here is for M2M fields
@@ -455,7 +468,7 @@ class CourseSerializer(serializers.ModelSerializer, QuerySerializerMixin):
     categories = CategorySerializer(many=True, read_only=True)
     tags = TagSerializer(many=True, read_only=True)
 
-    pricing_plan = serializers.SerializerMethodField()
+    default_pricing_plan = serializers.SerializerMethodField()
     PREFETCH_FIELDS = ['categories__course_set', 'privacy__shared_with']
 
 
@@ -466,7 +479,7 @@ class CourseSerializer(serializers.ModelSerializer, QuerySerializerMixin):
         'description', 'objectives', 'about',
         'categories', 'tags', 'language',
         'privacy', 
-        'pricing_plan',
+        'default_pricing_plan',
         'units_count', 
         'lectures_count', 
         'course_duration', 
@@ -499,11 +512,11 @@ class CourseSerializer(serializers.ModelSerializer, QuerySerializerMixin):
     def get_language(self, course):
         return course.get_language_display()
 
-    def get_pricing_plan(self, course):
+    def get_default_pricing_plan(self, course):
         request = self.context.get('request', None)
         pricing_plan = course.get_default_pricing_plan(request)
         if not pricing_plan:
-            return None
+            return []
         return CoursePricingPlanSerializer(pricing_plan, many=False).data
 
 
@@ -522,7 +535,7 @@ class CoursesSerializer(serializers.ModelSerializer, QuerySerializerMixin):
     categories = CategorySerializer(many=True, read_only=True)
     tags = TagSerializer(many=True, read_only=True)
 
-    default_plan = serializers.SerializerMethodField()
+    default_pricing_plan = serializers.SerializerMethodField()
 
     PREFETCH_FIELDS = ['categories__course_set', 'privacy__shared_with']
 
@@ -534,7 +547,7 @@ class CoursesSerializer(serializers.ModelSerializer, QuerySerializerMixin):
         'description', 'objectives', 'about',
         'categories', 'tags', 'language',
         'privacy', 
-        'default_plan',
+        'default_pricing_plan',
         'units_count', 
         'lectures_count', 
         'course_duration', 
@@ -567,9 +580,11 @@ class CoursesSerializer(serializers.ModelSerializer, QuerySerializerMixin):
     def get_language(self, course):
         return course.get_language_display()
 
-    def get_default_plan(self, course):
+    def get_default_pricing_plan(self, course):
         request = self.context.get('request', None)
         pricing_plan = course.get_default_pricing_plan(request)
+        if not pricing_plan:
+            return []
         return CoursePricingPlanSerializer(pricing_plan, many=False).data
 
 

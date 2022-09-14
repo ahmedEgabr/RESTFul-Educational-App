@@ -19,7 +19,7 @@ urlpatterns = [
   path('<int:playlist_id>/lectures/<int:lecture_id>', PlayListLectureDestroy.as_view(), name='remove-from-playlist'),
 
   # Favorites APIs routes
-  path('favorites', FavoriteListUpdate.as_view(), name='favorites'),
+  path('favorites/lectures', FavoriteListUpdate.as_view(), name='favorites'),
   path('favorites/lectures/<int:lecture_id>', FavoriteLectureDestroy.as_view(), name='delete-from-favorites'),
   # History APIs
   path('watch_history/', WatchHistoryList.as_view(), name='watch_history'),

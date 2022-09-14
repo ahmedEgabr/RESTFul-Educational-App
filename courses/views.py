@@ -9,6 +9,11 @@ class ReferenceAutocomplete(StafUserRequiredMixin, autocomplete.Select2QuerySetV
         qs = Reference.objects.none()
         if reference_category:
             qs = Reference.objects.filter(categories__in=[reference_category])
+        else:
+            qs = Reference.objects.all()
+        
+        if self.q:
+            qs = qs.filter(name__icontains=self.q)
         return qs
 
 

@@ -67,7 +67,7 @@ class PlaylistLectures(APIView, PageNumberPagination):
         if not playlist:
             return Response(general_utils.error("not_found"), status=status.HTTP_404_NOT_FOUND)
 
-        lectures = playlist.lectures.prefetch_related('privacy__shared_with').annotate(
+        lectures = playlist.lectures.select_related('privacy').prefetch_related('privacy__shared_with').annotate(
                 viewed=Exists(
                             CourseActivity.objects.filter(lecture=OuterRef('pk'), user=self.request.user, is_finished=True)
                             ),
@@ -83,10 +83,9 @@ class PlaylistLectures(APIView, PageNumberPagination):
 
     def put(self, request, playlist_id, format=None):
 
-        try:
-            request_body = request.data
-            lecture_id = request_body['lecture_id']
-        except Exception as e:
+        request_body = request.data
+        lecture_id = request_body.get('lecture_id')
+        if not lecture_id:
             return Response(general_utils.error('required_fields'), status=status.HTTP_400_BAD_REQUEST)
 
         filter_kwargs = {
@@ -97,9 +96,9 @@ class PlaylistLectures(APIView, PageNumberPagination):
             return Response(error, status=status.HTTP_404_NOT_FOUND)
 
         if lecture.is_allowed_to_access_lecture(request.user):
-
             playlist = Playlist.objects.filter(id=playlist_id, user=request.user).first()
             if not playlist:
+                error = general_utils.error("not_found")
                 return Response(error, status=status.HTTP_404_NOT_FOUND)
 
             playlist.add(lecture)

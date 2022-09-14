@@ -46,6 +46,9 @@ class Lecture(UserActionModel, TimeStampedModel):
         if not hasattr(self, "privacy"):
             self.create_privacy()
 
+    def has_quiz(self):
+        return hasattr(self, "quiz")
+    
     def delete_activity_for_all_users(self):
         CourseActivity.objects.filter(lecture=self).delete()
         return True

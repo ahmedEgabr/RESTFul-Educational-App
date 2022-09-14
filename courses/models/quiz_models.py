@@ -12,7 +12,7 @@ class Quiz(TimeStampedModel, UserActionModel):
         null=True,
         related_name="quiz"
         )
-    questions = models.ManyToManyField("question_banks.Question")
+    questions = models.ManyToManyField("question_banks.Question", related_name="quizzes")
 
     class Meta:
         verbose_name_plural = 'quizzes'

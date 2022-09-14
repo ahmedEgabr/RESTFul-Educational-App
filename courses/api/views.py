@@ -7,13 +7,14 @@ from rest_framework.permissions import IsAuthenticated
 from alteby.permissions import CoursePermission
 from rest_framework import status
 from django.utils import timezone
+from courses.models.quiz_models import Quiz
 from users.api.serializers import TeacherSerializer
 from .serializers import (
 CourseSerializer, CoursesSerializer, CourseIndexSerialiser,
 UnitSerializer, TopicsListSerializer,
 TopicDetailSerializer, DemoLectureSerializer,
 FullLectureSerializer, QuizSerializer,
-QuizResultSerializer, AttachementSerializer,
+QuizResultSerializer, CourseAttachementSerializer, LectureAttachementSerializer,
 DiscussionSerializer, FeedbackSerializer,
 LectureExternalLinkSerializer, ReferenceSerializer, CoursePricingPlanSerializer
 )
@@ -315,7 +316,7 @@ class LectureDetail(APIView):
             return Response(general_utils.error('not_found'), status=status.HTTP_404_NOT_FOUND)
 
         if lecture.is_allowed_to_access_lecture(request.user):
-            serializer = FullLectureSerializer(lecture, many=False, context={'request': request})
+            serializer = FullLectureSerializer(lecture, many=False, context={'request': request, "topic_id": topic_id})
             watch_history, created = WatchHistory.objects.get_or_create(user=request.user)
             watch_history.add(lecture)
             return Response(serializer.data)
@@ -476,7 +477,7 @@ class LecturesList(APIView, PageNumberPagination):
             ).order_by("assigned_topics__order")
         
         lectures = self.paginate_queryset(lectures, request, view=self)
-        serializer = DemoLectureSerializer(lectures, many=True, context={'request': request})
+        serializer = DemoLectureSerializer(lectures, many=True, context={'request': request, "topic_id": topic_id})
         return self.get_paginated_response(serializer.data)
 
 
@@ -533,8 +534,8 @@ class QuizDetail(APIView):
             if not lecture.is_allowed_to_access_lecture(request.user):
                 error = general_utils.error('access_denied')
                 return Response(error, status=status.HTTP_403_FORBIDDEN)
-
-            if not lecture.quiz:
+            
+            if not lecture.has_quiz():
                 error = general_utils.error('not_found')
                 return Response(error, status=status.HTTP_404_NOT_FOUND)
 
@@ -621,34 +622,39 @@ class LectureQuizAnswer(APIView):
 
         filter_kwargs = {
             'id': lecture_id,
-            'topic__id': topic_id,
-            'topic__unit__id': unit_id,
-            'topic__unit__course__id': course_id
+            'assigned_topics__topic__id': topic_id,
+            'assigned_topics__topic__unit__id': unit_id,
+            'assigned_topics__topic__unit__course__id': course_id
         }
         lecture, found, error = utils.get_object(model=Lecture, filter_kwargs=filter_kwargs, select_related=['quiz'])
         if not found:
             return Response(error, status=status.HTTP_404_NOT_FOUND)
 
-        quiz = lecture.quiz
-        if not quiz:
+        if not lecture.has_quiz():
             return Response(general_utils.error('not_found'), status=status.HTTP_404_NOT_FOUND)
 
         answers_objs = []
         for answer in quiz_answers:
-            user = request.user
             try:
                 question = Question.objects.get(id=answer['question_id'])
+                question.quizzes.get(id=lecture.quiz.id)
                 selected_choice = Choice.objects.get(id=answer['selected_choice_id'], question=question)
-            except (Question.DoesNotExist, Choice.DoesNotExist):
+            except (Question.DoesNotExist, Choice.DoesNotExist, Quiz.DoesNotExist):
                 return Response(general_utils.error('not_found'), status=status.HTTP_404_NOT_FOUND)
             
-            answer = QuestionAnswer(user=request.user, quiz=quiz, question=question, selected_choice=selected_choice)
+            answer = QuestionAnswer(user=request.user, quiz=lecture.quiz, question=question, selected_choice=selected_choice)
             answers_objs.append(answer)
 
         if not answers_objs:
             return Response(general_utils.error('empty_quiz_answers'), status=status.HTTP_400_BAD_REQUEST)
 
-        QuestionAnswer.objects.bulk_create(answers_objs)
+        for obj in answers_objs:
+            existing_answer = QuestionAnswer.objects.filter(user=request.user, quiz=lecture.quiz, question=obj.question).first()
+            if existing_answer:
+                existing_answer.selected_choice = obj.selected_choice
+                existing_answer.save(force_update=True)
+            else:
+                obj.save()
         return Response(general_utils.success('quiz_answer_submitted'), status=status.HTTP_201_CREATED)
 
 class CourseQuizResult(APIView):
@@ -677,19 +683,18 @@ class LectureQuizResult(APIView):
 
         filter_kwargs = {
             'id': lecture_id,
-            'topic__id': topic_id,
-            'topic__unit__id': unit_id,
-            'topic__unit__course__id': course_id
+            'assigned_topics__topic__id': topic_id,
+            'assigned_topics__topic__unit__id': unit_id,
+            'assigned_topics__topic__unit__course__id': course_id
         }
         lecture, found, error = utils.get_object(model=Lecture, filter_kwargs=filter_kwargs)
         if not found:
             return Response(error, status=status.HTTP_404_NOT_FOUND)
 
-        quiz = lecture.quiz
-        if not quiz:
+        if not lecture.has_quiz():
             return Response(general_utils.error('not_found'), status=status.HTTP_404_NOT_FOUND)
 
-        serializer = QuizResultSerializer(quiz, many=False, context={'request': request})
+        serializer = QuizResultSerializer(lecture.quiz, many=False, context={'request': request})
         return Response(serializer.data)
 
 class CourseAttachement(APIView):
@@ -705,7 +710,7 @@ class CourseAttachement(APIView):
         if course.is_allowed_to_access_course(request.user):
             attachments = course.attachments.all()
 
-            serializer = AttachementSerializer(attachments, many=True, context={'request': request})
+            serializer = CourseAttachementSerializer(attachments, many=True, context={'request': request})
             return Response(serializer.data)
 
         return Response(general_utils.error('access_denied'), status=status.HTTP_403_FORBIDDEN)
@@ -726,7 +731,7 @@ class LectureAttachement(APIView):
 
         if lecture.is_allowed_to_access_lecture(request.user):
             attachments = lecture.attachments.all()
-            serializer = AttachementSerializer(attachments, many=True, context={'request': request})
+            serializer = LectureAttachementSerializer(attachments, many=True, context={'request': request})
             return Response(serializer.data)
 
         return Response(general_utils.error('access_denied'), status=status.HTTP_403_FORBIDDEN)
@@ -825,7 +830,7 @@ class CourseDiscussions(APIView):
         if not found:
             return Response(error, status=status.HTTP_404_NOT_FOUND)
         
-        discussions = course.discussions.all()
+        discussions = course.discussions.filter(status=Discussion.STATUS_CHOICES.approved)
         serializer = DiscussionSerializer(discussions, many=True, context={'request': request})
         return Response(serializer.data)
 
@@ -866,7 +871,7 @@ class LectureDiscussions(APIView, PageNumberPagination):
             return Response(error, status=status.HTTP_404_NOT_FOUND)
 
         if lecture.is_allowed_to_access_lecture(request.user):
-            discussions = lecture.discussions.all()
+            discussions = lecture.discussions.filter(status=Discussion.STATUS_CHOICES.approved)
             discussions = self.paginate_queryset(discussions, request, view=self)
             serializer = DiscussionSerializer(discussions, many=True, context={'request': request})
             return self.get_paginated_response(serializer.data)
@@ -885,10 +890,14 @@ class LectureDiscussions(APIView, PageNumberPagination):
             return Response(error, status=status.HTTP_404_NOT_FOUND)
 
         if lecture.is_allowed_to_access_lecture(request.user):
-            discussion_body = request.data['body']
+            discussion_body = request.data.get('body')
+            if not discussion_body:
+                error = general_utils.error('required_fields')
+                return Response(error, status=status.HTTP_400_BAD_REQUEST)
             discussion = Discussion.objects.create(
             user=request.user,
-            object=lecture,
+            topic_id=topic_id,
+            lecture=lecture,
             body=discussion_body
             )
             serializer = DiscussionSerializer(discussion, many=False, context={'request': request})
