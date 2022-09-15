@@ -72,10 +72,10 @@ class AppVersion(TimeStampedModel):
     def is_force_upgrade(cls, version_code):
         """ Get is_force_upgrade based on api int version_code """
         if not isinstance(version_code, int):
-            return None
+            return False
 
         if not version_code:
-            return None
+            return False
 
         minimum_app_version_query = cls.objects.filter(is_minimum_version=True, is_active=True)
         if not minimum_app_version_query.exists():
@@ -88,10 +88,10 @@ class AppVersion(TimeStampedModel):
     def is_recommend_upgrade(cls, version_code):
         """ retrieves is_recommend_upgrade based on api int version_code """
         if not isinstance(version_code, int):
-            return None
+            return False
 
         if not version_code:
-            return None
+            return False
 
         minimum_app_version_query = cls.objects.filter(is_minimum_version=True, is_active=True)
         if not minimum_app_version_query.exists():
