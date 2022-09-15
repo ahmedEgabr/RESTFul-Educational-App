@@ -169,10 +169,10 @@ class CoursePrivacyInline(nested_admin.NestedStackedInline):
     'available_from',
     'enrollment_duration',
     'enrollment_duration_type',
-    'is_downloadable',
-    'is_downloadable_for_enrolled_users_only',
-    'is_quiz_available',
-    'is_quiz_available_for_enrolled_users_only',
+    # 'is_downloadable',
+    # 'is_downloadable_for_enrolled_users_only',
+    # 'is_quiz_available',
+    # 'is_quiz_available_for_enrolled_users_only',
     'is_attachements_available',
     "is_attachements_available_for_enrolled_users_only"
     )
