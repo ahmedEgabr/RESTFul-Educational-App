@@ -182,15 +182,13 @@ class User(AbstractBaseUser, PermissionsMixin):
         )
     
     def get_enrolled_courses(self):
+        from courses.models.course import Course
         enrolled_courses_ids = self.enrollments.filter(
             Q(lifetime_enrollment=True) |
             Q(expiry_date__gt=timezone.now()),
             force_expiry=False,
             is_active=True
         ).values_list('course', flat=True)
-        
         if not enrolled_courses_ids:
-            return self.enrollments.none()
-        
-        from courses.models.course import Course
+            return Course.objects.none()
         return Course.objects.filter(id__in=enrolled_courses_ids)

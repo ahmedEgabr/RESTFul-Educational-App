@@ -354,4 +354,5 @@ IP_GEO_WHITELISTED_VIEWS = [
     "FeaturedCoursesList",
     "CourseDetail", 
     "CoursePricingPlanList",
+    "EnrolledCourses"
     ]
