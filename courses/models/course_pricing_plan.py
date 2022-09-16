@@ -46,10 +46,10 @@ class CoursePricingPlan(TimeStampedModel, UserActionModel):
         if not self.is_active:
             return None
         
-        if not self.duration and self.duration_type:
+        if not self.duration and self.duration_type and not self.lifetime_access:
             raise ValidationError({"duration": "This field is required."})
 
-        if not self.duration_type and self.duration:
+        if not self.duration_type and self.duration and not self.lifetime_access:
             raise ValidationError({"duration_type": "This field is required."})
 
         if not (self.duration or self.duration_type or self.lifetime_access):
