@@ -31,5 +31,10 @@ class LectureOverlapForm(forms.ModelForm):
             forward=['unit']
             )
         }
+    
+    def __init__(self, *args, **kwargs):
 
-
+        super(LectureOverlapForm, self).__init__(*args, **kwargs)
+        if 'topic' in self.initial and self.initial["topic"]:
+            self.initial["unit"] = self.instance.topic.unit
+            self.initial["course"] = self.instance.topic.unit.course

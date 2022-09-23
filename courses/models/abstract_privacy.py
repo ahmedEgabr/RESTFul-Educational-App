@@ -17,55 +17,7 @@ class Privacy(UserActionModel, TimeStampedModel):
 
     option = models.CharField(max_length=20, choices=PRIVACY_CHOICES, default=PRIVACY_CHOICES.private)
     shared_with = models.ManyToManyField("users.User", blank=True)
-
-    available_from = models.DateTimeField(
-    blank=True,
-    null=True,
-    help_text="Must be set when choosing public (for a limited duration) option."
-    )
-
-    duration = models.IntegerField(
-    blank=True,
-    null=True,
-    help_text="Must be set when choosing public (for a limited duration) option."
-    )
-
-    duration_type = models.CharField(
-    blank=True,
-    max_length=10,
-    choices=DateFormat.choices,
-    help_text="Must be set when choosing public (for a limited duration) option."
-    )
-
-    enrollment_duration = models.IntegerField(
-    blank=True,
-    null=True,
-    verbose_name="When avilable for free, users can enroll it for",
-    help_text="""
-    The duration that the course will be availabe for the user form the date of the enrollment when the course was free.
-    Must be set when choosing public (for limited duration) option.
-    """
-    )
-
-    enrollment_duration_type = models.CharField(
-    blank=True,
-    max_length=10,
-    choices=DateFormat.choices,
-    help_text="Must be set when choosing public (for a limited duration) option."
-    )
-
-    is_downloadable = models.BooleanField(default=True, verbose_name="Is Downloadable")
-    is_downloadable_for_enrolled_users_only = models.BooleanField(
-    default=True,
-    verbose_name="Is Downloadable for Enrolled Users Only"
-    )
-
-    is_quiz_available = models.BooleanField(default=True, verbose_name="Is Quiz Available")
-    is_quiz_available_for_enrolled_users_only = models.BooleanField(
-    default=True,
-    verbose_name="Is Quiz Available for Enrolled Users Only"
-    )
-
+    
     is_attachements_available = models.BooleanField(default=True, verbose_name="Is Attachemets Available")
     is_attachements_available_for_enrolled_users_only = models.BooleanField(
     default=True,
@@ -74,20 +26,6 @@ class Privacy(UserActionModel, TimeStampedModel):
 
     class Meta:
         abstract = True
-
-    def clean_fields(self, **kwargs):
-        if self.option == self.PRIVACY_CHOICES.limited_duration:
-            if not self.duration:
-                raise ValidationError({"duration": "Option Public for Limited Duration requeires this field to be set."})
-            if not self.available_from:
-                raise ValidationError({"available_from": "Option Public for Limited Duration requeires this field to be set."})
-            if not self.duration:
-                raise ValidationError({"duration_type": "Option Public for Limited Duration requeires this field to be set."})
-            if not self.enrollment_duration:
-                raise ValidationError({"enrollment_duration": "Option Public for Limited Duration requeires this field to be set."})
-            if not self.enrollment_duration_type:
-                raise ValidationError({"enrollment_duration_type": "Option Public for Limited Duration requeires this field to be set."})
-        super(Privacy, self).clean_fields(**kwargs)
 
     def save(self, *args, **kwargs):
         self.full_clean()

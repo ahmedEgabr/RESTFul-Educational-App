@@ -102,37 +102,13 @@ class LectureConfig(nested_admin.NestedModelAdmin):
 
 
 @admin.register(CourseEnrollment, site=teacher_admin)
-class CourseEnrollmentConfig(CourseEnrollmentConfig):
-    model = CourseEnrollment
-    change_form_template = 'admin/forms/course_enrollment_change_form.html'
-    
-    readonly_fields = (
-    'user',
-    'course',
-    'payment_method',
-    'payment_type',
-    'enrollment_duration',
-    'enrollment_duration_type',
-    'lifetime_enrollment',
-    'enrollment_date',
-    'expiry_date',
-    'force_expiry',
-    'is_active',
-    'created_by'
-    )
-    
+class TeacherCourseEnrollmentConfig(CourseEnrollmentConfig):
+
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         if request.user.is_superuser:
             return qs
-        return request.user.courses_created.all()
-    
-    @staticmethod
-    def expiry_date(object):
-        if not object.calculate_expiry_date:
-            return None
-        return date_format(timezone.localtime(object.calculate_expiry_date), 'DATETIME_FORMAT')
-
+        return qs.filter(course__created_by=request.user)
 
 @admin.register(Discussion, site=teacher_admin)
 class DiscussionConfig(admin.ModelAdmin):

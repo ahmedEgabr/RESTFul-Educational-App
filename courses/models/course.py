@@ -20,7 +20,7 @@ from payment.models import CourseEnrollment
 class Course(UserActionModel):
 
     title = models.CharField(max_length=100)
-    description = RichTextField()
+    description = RichTextField(blank=True, null=True)
     objectives = RichTextField(blank=True, null=True)
     about = models.TextField(blank=True, null=True)
     categories = models.ManyToManyField("categories.Category", blank=True)

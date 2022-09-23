@@ -14,7 +14,8 @@ LectureExternalLink, Reference
 from alteby.utils import seconds_to_duration
 from categories.api.serializers import CategorySerializer, TagSerializer
 from users.api.serializers import TeacherSerializer, BasicUserSerializer
-from question_banks.models import QuestionAnswer, Question, Choice
+from question_banks.models import QuestionAnswer
+from question_banks.serializers import QuestionSerializer, ChoiceSerializer
 
 
 class CoursePathSerializer(serializers.ModelSerializer):
@@ -116,18 +117,6 @@ class ReferenceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Reference
         fields = ("id", "name", "type", "link")
-
-
-class ChoiceSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Choice
-        fields = ('id', 'choice', 'is_correct', 'explanation', 'image')
-
-class QuestionSerializer(serializers.ModelSerializer):
-    choices = ChoiceSerializer(many=True, read_only=True)
-    class Meta:
-        model = Question
-        fields = ('id', 'title', 'choices', 'extra_info', 'image')
 
 class QuizSerializer(serializers.ModelSerializer):
     questions = QuestionSerializer(many=True, read_only=True)

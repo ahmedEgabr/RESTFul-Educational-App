@@ -3,7 +3,7 @@ from main.utility_models import TimeStampedModel, UserActionModel
 
 
 class Quiz(TimeStampedModel, UserActionModel):
-    name = models.CharField(max_length=50)
+    name = models.CharField(max_length=50, blank=True, null=True)
     description = models.TextField(null=True, blank=True)
     lecture = models.OneToOneField(
         "courses.Lecture", 

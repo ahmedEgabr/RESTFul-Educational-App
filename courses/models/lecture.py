@@ -21,7 +21,7 @@ class Lecture(UserActionModel, TimeStampedModel):
     #TODO: remove topic and order and indexes
     topic = models.ForeignKey("courses.Topic", on_delete=models.CASCADE, null=True, blank=True, related_name="lectures")
     title = models.CharField(max_length=100)
-    description = RichTextField()
+    description = RichTextField(blank=True, null=True)
     objectives = RichTextField(blank=True, null=True)
     video = models.FileField(upload_to=get_lecture_path, blank=True, null=True)
     audio = models.FileField(upload_to='audio', blank=True, null=True)
