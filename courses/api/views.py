@@ -16,7 +16,7 @@ TopicDetailSerializer, DemoLectureSerializer,
 FullLectureSerializer, QuizSerializer,
 QuizResultSerializer, CourseAttachementSerializer, LectureAttachementSerializer,
 DiscussionSerializer, FeedbackSerializer,
-LectureExternalLinkSerializer, ReferenceSerializer, CoursePricingPlanSerializer
+LectureExternalLinkSerializer, ReferenceSerializer, CoursePlanSerializer
 )
 from courses.models import Course, Unit, Topic, CourseActivity, Lecture, Discussion, Feedback, Privacy
 from question_banks.models import Question, Choice, QuestionAnswer
@@ -996,7 +996,7 @@ class TrackCourseActivity(APIView):
         }
         return Response(response, status=status.HTTP_201_CREATED)
 
-class CoursePricingPlanList(APIView, PageNumberPagination):
+class CoursePlanList(APIView, PageNumberPagination):
     
     def get(self, request, course_id):
         
@@ -1009,7 +1009,7 @@ class CoursePricingPlanList(APIView, PageNumberPagination):
         
         pricing_plans = course.get_pricing_plans(request)
         pricing_plans = self.paginate_queryset(pricing_plans, request, view=self)
-        serializer = CoursePricingPlanSerializer(pricing_plans, many=True, context={'request': request})
+        serializer = CoursePlanSerializer(pricing_plans, many=True, context={'request': request})
         return self.get_paginated_response(serializer.data)
     
 

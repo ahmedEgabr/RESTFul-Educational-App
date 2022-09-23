@@ -8,7 +8,7 @@ class Choice(TimeStampedModel):
     choice = models.CharField(max_length=200)
     is_correct = models.BooleanField()
     explanation = models.TextField(blank=True, null=True)
-    image = models.ImageField(upload_to=get_choice_path, blank=True)
+    explanation_image = models.ImageField(upload_to=get_choice_path, blank=True)
 
     def __str__(self):
           return f'{self.question}-{self.choice}'

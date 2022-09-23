@@ -4,7 +4,7 @@ from main.utility_models import TimeStampedModel
 
 class QuestionAnswer(TimeStampedModel):
     user = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="questions_result")
-    quiz = models.ForeignKey("courses.Quiz", on_delete=models.PROTECT, related_name="result")
+    quiz = models.ForeignKey("courses.Quiz", on_delete=models.CASCADE, related_name="result")
     question = models.ForeignKey("question_banks.Question", on_delete=models.PROTECT)
     selected_choice = models.ForeignKey("question_banks.Choice", on_delete=models.PROTECT)
     is_correct = models.BooleanField(default=False)

@@ -10,7 +10,7 @@ QuizDetail, CourseQuizAnswer, LectureQuizAnswer,
 CourseQuizResult, LectureQuizResult,
 CourseAttachement, LectureAttachement,
 CourseTreeLecturesList, LectureExternalLinksList, LectureReferenceList, CourseReferenceList,
-CourseTeachersList, CoursePricingPlanList,
+CourseTeachersList, CoursePlanList,
 CourseEnrollmentView
 )
 
@@ -27,7 +27,7 @@ urlpatterns = [
   path('<int:course_id>/index', CourseIndex.as_view(), name='course-index'),
   path('<int:course_id>/feedbacks/', CourseFeedbacks.as_view(), name='course_feedbacks'),
   path('<int:course_id>/discussions', CourseDiscussions.as_view(), name='course_discussions'),
-  path('<int:course_id>/pricing-plans', CoursePricingPlanList.as_view(), name='pricing-plans'),
+  path('<int:course_id>/pricing-plans', CoursePlanList.as_view(), name='pricing-plans'),
   path('<int:course_id>/quiz', QuizDetail.as_view(), name='course_quiz'),
   path('<int:course_id>/quiz/result', CourseQuizResult.as_view(), name='course_quiz_result'),
   path('<int:course_id>/quiz/answer', CourseQuizAnswer.as_view(), name='course_quiz_answer'),

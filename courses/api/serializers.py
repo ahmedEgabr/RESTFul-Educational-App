@@ -5,7 +5,7 @@ from django_countries.serializers import CountryFieldMixin
 from courses.models import (
 Course, Unit, Topic,
 CourseActivity,
-Lecture, LectureQuality, CoursePrivacy, CoursePricingPlan, CoursePlanPrice,
+Lecture, LectureQuality, CoursePrivacy, CoursePlan, PlanPrice,
 LecturePrivacy,
 Quiz,
 CourseAttachement, LectureAttachement, Discussion, Reply, Feedback,
@@ -14,7 +14,8 @@ LectureExternalLink, Reference
 from alteby.utils import seconds_to_duration
 from categories.api.serializers import CategorySerializer, TagSerializer
 from users.api.serializers import TeacherSerializer, BasicUserSerializer
-from question_banks.models import QuestionAnswer, Question, Choice
+from question_banks.models import QuestionAnswer
+from question_banks.serializers import QuestionSerializer, ChoiceSerializer
 
 
 class CoursePathSerializer(serializers.ModelSerializer):
@@ -118,17 +119,6 @@ class ReferenceSerializer(serializers.ModelSerializer):
         fields = ("id", "name", "type", "link")
 
 
-class ChoiceSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Choice
-        fields = ('id', 'choice', 'is_correct', 'explanation', 'image')
-
-class QuestionSerializer(serializers.ModelSerializer):
-    choices = ChoiceSerializer(many=True, read_only=True)
-    class Meta:
-        model = Question
-        fields = ('id', 'title', 'choices', 'extra_info', 'image')
-
 class QuizSerializer(serializers.ModelSerializer):
     questions = QuestionSerializer(many=True, read_only=True)
     # number_of_questions = serializers.CharField(source='get_questions_count')
@@ -188,10 +178,9 @@ class CoursePrivacySerializer(serializers.ModelSerializer):
         "duration_type",
         "enrollment_duration",
         "enrollment_duration_type",
-        # "is_downloadable",
-        # "is_downloadable_for_enrolled_users_only",
-        # "is_quiz_available",
-        # "is_quiz_available_for_enrolled_users_only",
+        "is_free",
+        "discount_percent",
+        "show_contact_admin_on_free_enrollment",
         "is_attachements_available",
         "is_attachements_available_for_enrolled_users_only",
         "shared_with"
@@ -204,12 +193,6 @@ class LecturePrivacySerializer(serializers.ModelSerializer):
         "id",
         "lecture",
         "option",
-        # "available_from",
-        # "is_available_during_limited_duration",
-        # "duration",
-        # "durationtype",
-        # "enrollment_duration",
-        # "enrollment_duration_type",
         "is_downloadable",
         "is_downloadable_for_enrolled_users_only",
         "is_quiz_available",
@@ -438,19 +421,19 @@ class UnitTopicsSerializer(serializers.ModelSerializer):
         model = Unit
         fields = ('id', 'title', 'course', 'order', 'topics', 'lectures_duration', 'lectures_count')
     
-class CoursePlanPriceSerializer(CountryFieldMixin, serializers.ModelSerializer):
+class PlanPriceSerializer(CountryFieldMixin, serializers.ModelSerializer):
     class Meta:
-        model = CoursePlanPrice
+        model = PlanPrice
         fields = ("id", "amount", "currency")
         
-class CoursePricingPlanSerializer(serializers.ModelSerializer):
+class CoursePlanSerializer(serializers.ModelSerializer):
     price = serializers.SerializerMethodField()
     class Meta:
-        model = CoursePricingPlan
+        model = CoursePlan
         fields = ("id", "duration", "duration_type", "lifetime_access", "is_free_for_all_countries", "price", "created_at")
     
     def get_price(self, plan):
-        return CoursePlanPriceSerializer(plan.prices.first(), many=False).data
+        return CoursePlanSerializer(plan.prices.first(), many=False).data
 
 
 class CourseSerializer(serializers.ModelSerializer, QuerySerializerMixin):
@@ -517,7 +500,7 @@ class CourseSerializer(serializers.ModelSerializer, QuerySerializerMixin):
         pricing_plan = course.get_default_pricing_plan(request)
         if not pricing_plan:
             return []
-        return CoursePricingPlanSerializer(pricing_plan, many=False).data
+        return CoursePlanSerializer(pricing_plan, many=False).data
 
 
 class CoursesSerializer(serializers.ModelSerializer, QuerySerializerMixin):
@@ -585,7 +568,7 @@ class CoursesSerializer(serializers.ModelSerializer, QuerySerializerMixin):
         pricing_plan = course.get_default_pricing_plan(request)
         if not pricing_plan:
             return []
-        return CoursePricingPlanSerializer(pricing_plan, many=False).data
+        return CoursePlanSerializer(pricing_plan, many=False).data
 
 
 class ReplySerializer(serializers.ModelSerializer):

@@ -19,6 +19,6 @@ from .report import Report
 from .reference import Reference
 from .note import Note
 from .lecture_external_link import LectureExternalLink
-from .course_pricing_plan import CoursePricingPlan
-from .course_plan_price import CoursePlanPrice
+from .course_plan import CoursePlan
+from .plan_price import PlanPrice
 from .reply import Reply

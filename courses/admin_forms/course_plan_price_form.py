@@ -1,8 +1,8 @@
 from django import forms
-from courses.models import CoursePlanPrice
+from courses.models import PlanPrice
 
 
-class CoursePlanPriceForm(forms.ModelForm):
+class PlanPriceForm(forms.ModelForm):
     class Meta:
-        model = CoursePlanPrice
+        model = PlanPrice
         fields = '__all__'

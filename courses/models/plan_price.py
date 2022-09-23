@@ -7,13 +7,13 @@ from django_countries.fields import CountryField
 from alteby.utils import render_alert
 
 
-class CoursePlanPrice(models.Model):
+class PlanPrice(models.Model):
 
     class PriceCurrency(models.TextChoices):
         dollar = "dollar", ("$ Dollar")
         egp = "egp", ("E£ EGP")
 
-    plan = models.ForeignKey("courses.CoursePricingPlan", on_delete=models.CASCADE, related_name="prices")
+    plan = models.ForeignKey("courses.CoursePlan", on_delete=models.CASCADE, related_name="prices")
     amount = models.DecimalField(
         max_digits=10, decimal_places=2, blank=True, default=0,
         validators=[MinValueValidator(0)]
@@ -170,11 +170,11 @@ class CoursePlanPrice(models.Model):
         #     )
 
 
-        super(CoursePlanPrice, self).clean_fields(**kwargs)
+        super(PlanPrice, self).clean_fields(**kwargs)
 
     def save(self, *args, **kwargs):
         self.full_clean()
-        return super(CoursePlanPrice, self).save(*args, **kwargs)
+        return super(PlanPrice, self).save(*args, **kwargs)
 
     def repeated_country_selected(self):
         if not self.countries:

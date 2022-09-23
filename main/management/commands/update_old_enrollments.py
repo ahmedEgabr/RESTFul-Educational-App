@@ -13,8 +13,7 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         enrollments = CourseEnrollment.objects.all()
         for enrollment in enrollments:
-            enrollment.enrollment_duration = 2
-            enrollment.enrollment_duration_type = DateFormat.years
+            enrollment.lifetime_enrollment = True
             enrollment.save()
         self.stdout.write(self.style.SUCCESS("Done."))
         

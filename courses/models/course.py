@@ -10,8 +10,8 @@ from courses.models.discussion import Discussion
 from courses.models.lecture import Lecture
 from courses.models.course_privacy import CoursePrivacy
 from courses.models.reference import Reference
-from courses.models.course_pricing_plan import CoursePricingPlan
-from courses.models.course_plan_price import CoursePlanPrice
+from courses.models.course_plan import CoursePlan
+from courses.models.plan_price import PlanPrice
 from users.models import User, Teacher
 from main.utility_models import Languages
 from payment.models import CourseEnrollment
@@ -20,7 +20,7 @@ from payment.models import CourseEnrollment
 class Course(UserActionModel):
 
     title = models.CharField(max_length=100)
-    description = RichTextField()
+    description = RichTextField(blank=True, null=True)
     objectives = RichTextField(blank=True, null=True)
     about = models.TextField(blank=True, null=True)
     categories = models.ManyToManyField("categories.Category", blank=True)
@@ -128,7 +128,7 @@ class Course(UserActionModel):
         return self.pricing_plans.exists()
 
     def create_default_pricing_plan(self):
-        return CoursePricingPlan.create_default_pricing_plan(course=self)
+        return CoursePlan.create_default_pricing_plan(course=self)
     
     def get_pricing_plans(self, request):
 
@@ -138,7 +138,7 @@ class Course(UserActionModel):
         
         country_regex = u'^{0},|,{0},|,{0}$|^{0}$'.format(request.country)
         
-        prices_filter_queryset = CoursePlanPrice.objects.filter(
+        prices_filter_queryset = PlanPrice.objects.filter(
             models.Q(countries__regex=country_regex) |
             models.Q(select_all_countries=True) | 
             (models.Q(is_free_for_selected_countries=True) & models.Q(countries__regex=country_regex)),
@@ -146,7 +146,7 @@ class Course(UserActionModel):
             is_active=True
             ).order_by("amount")
         
-        default_prices_filter = CoursePlanPrice.objects.filter(
+        default_prices_filter = PlanPrice.objects.filter(
             plan__course=self,
             is_default=True, 
             is_active=True
@@ -178,7 +178,7 @@ class Course(UserActionModel):
         
         country_regex = u'^{0},|,{0},|,{0}$|^{0}$'.format(request.country)
         
-        prices_filter_queryset = CoursePlanPrice.objects.filter(
+        prices_filter_queryset = PlanPrice.objects.filter(
             models.Q(countries__regex=country_regex) |
             models.Q(select_all_countries=True) | 
             (models.Q(is_free_for_selected_countries=True) & models.Q(countries__regex=country_regex)),
@@ -186,7 +186,7 @@ class Course(UserActionModel):
             is_active=True
             ).order_by("amount")
 
-        default_prices_filter = CoursePlanPrice.objects.filter(
+        default_prices_filter = PlanPrice.objects.filter(
             plan__course=self,
             is_default=True,
             is_active=True

@@ -4,7 +4,7 @@ from main.utility_models import TimeStampedModel, UserActionModel, DateFormat
 from alteby.utils import render_alert
 
 
-class CoursePricingPlan(TimeStampedModel, UserActionModel):
+class CoursePlan(TimeStampedModel, UserActionModel):
 
     course = models.ForeignKey("courses.Course", on_delete=models.CASCADE, related_name="pricing_plans")
 
@@ -91,11 +91,11 @@ class CoursePricingPlan(TimeStampedModel, UserActionModel):
                             )
                     }
                 )
-        super(CoursePricingPlan, self).clean_fields(**kwargs)
+        super(CoursePlan, self).clean_fields(**kwargs)
 
     def save(self, *args, **kwargs):
         self.full_clean()
-        return super(CoursePricingPlan, self).save(*args, **kwargs)
+        return super(CoursePlan, self).save(*args, **kwargs)
 
     @classmethod
     def create_default_pricing_plan(cls, course):

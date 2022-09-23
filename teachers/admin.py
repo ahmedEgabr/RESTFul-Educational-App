@@ -6,30 +6,35 @@ from django.shortcuts import redirect
 from django.urls import reverse
 from django.db import transaction
 from django.db.models import Q
+from django import forms
 from alteby.admin_sites import teacher_admin
 from courses.admin import (
-CourseConfig, CoursePricingPlanConfig,
+CourseConfig, CoursePlanConfig,
 LectureAttachementsInline, LecturePrivacyInline, LectureExternalLinkInline, ReplyInline, LectureOverlapInline
 )
-from courses.models import Course, Lecture, Discussion, Reference, CoursePricingPlan
+from courses.models import Course, Lecture, Discussion, Reference, CoursePlan
 from categories.models import Tag, Category, ReferenceCategory
 from .admin_forms import LectureForm, ReferenceForm, LectureOverlapForm
 from payment.models import CourseEnrollment
 from payment.admin import CourseEnrollmentConfig
-from .admin_forms import LectureForm, CoursePricingPlanForm
+from .admin_forms import LectureForm, CoursePlanForm
 from courses.tasks import detect_and_convert_lecture_qualities, extract_and_set_lecture_audio
-
+from payment.admin_forms import CourseEnrollmentForm
+from django.forms.models import modelform_factory, modelform_defines_fields
+from django.contrib.admin.utils import flatten_fieldsets
+from django.core.exceptions import FieldError
+from functools import partial
 
 
 class LectureOverlapInlineForTeacher(LectureOverlapInline):
     form = LectureOverlapForm
     
-@admin.register(CoursePricingPlan, site=teacher_admin)
-class TeacherCoursePricingPlanConfig(CoursePricingPlanConfig):
-    form = CoursePricingPlanForm
+@admin.register(CoursePlan, site=teacher_admin)
+class TeacherCoursePlanConfig(CoursePlanConfig):
+    form = CoursePlanForm
     
     def get_queryset(self, request):
-        qs = super(TeacherCoursePricingPlanConfig, self).get_queryset(request)
+        qs = super(TeacherCoursePlanConfig, self).get_queryset(request)
         return qs.select_related("course").filter(
             Q(created_by=request.user) |
             Q(course__created_by=request.user)
@@ -42,15 +47,15 @@ class TeacherCourseConfig(CourseConfig):
         qs = super().get_queryset(request)
         if request.user.is_superuser:
             return qs
-        return qs.filter(created_by=request.user)
+        return request.user.courses_created.all()
     
     def response_add(self, request, obj, post_url_continue=None):
-        url = reverse('teacher_admin:%s_%s_add' % ("courses",  "coursepricingplan"))
+        url = reverse('teacher_admin:%s_%s_add' % ("courses",  "courseplan"))
         return redirect(url)
     
     def response_change(self, request, obj):
         if not obj.pricing_plans.all():
-            url = reverse('teacher_admin:%s_%s_add' % ("courses",  "coursepricingplan"))
+            url = reverse('teacher_admin:%s_%s_add' % ("courses",  "courseplan"))
             return redirect(url)
         return super(CourseConfig, self).response_change(request, obj)
 
@@ -102,36 +107,13 @@ class LectureConfig(nested_admin.NestedModelAdmin):
 
 
 @admin.register(CourseEnrollment, site=teacher_admin)
-class CourseEnrollmentConfig(CourseEnrollmentConfig):
-    model = CourseEnrollment
-    change_form_template = 'admin/forms/course_enrollment_change_form.html'
-    
-    readonly_fields = (
-    'user',
-    'course',
-    'payment_method',
-    'payment_type',
-    'enrollment_duration',
-    'enrollment_duration_type',
-    'lifetime_enrollment',
-    'enrollment_date',
-    'expiry_date',
-    'force_expiry',
-    'is_active',
-    'created_by'
-    )
+class TeacherCourseEnrollmentConfig(CourseEnrollmentConfig):
     
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         if request.user.is_superuser:
             return qs
-        return request.user.courses_created.all()
-    
-    @staticmethod
-    def expiry_date(object):
-        if not object.calculate_expiry_date:
-            return None
-        return date_format(timezone.localtime(object.calculate_expiry_date), 'DATETIME_FORMAT')
+        return qs.filter(course__created_by=request.user)
 
 
 @admin.register(Discussion, site=teacher_admin)

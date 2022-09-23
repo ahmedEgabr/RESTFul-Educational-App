@@ -15,11 +15,11 @@ class ChoiceInline(admin.StackedInline):
 @admin.register(Question, site=main_admin)
 class QuestionAdmin(admin.ModelAdmin):
     model = Question
-    list_filter = ('title', 'is_active', 'created_at', 'created_by')
+    list_filter = ('reference', 'title', 'is_active', 'created_at', 'created_by')
     list_display = ('reference', 'title', 'is_active', 'created_at', 'created_by')
-    readonly_fields = ('created_by', 'created_at')
+    readonly_fields = ('reference', 'created_by', 'created_at')
     fieldsets = (
-        (None, {'fields': ('title', 'extra_info', 'image', 'is_active')}),
+        (None, {'fields': ('reference', 'title', 'extra_info', 'image', 'is_active')}),
     )
     
     inlines = [ChoiceInline]

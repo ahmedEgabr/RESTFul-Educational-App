@@ -3,8 +3,7 @@ from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
 from django.conf import settings
 from django.db import transaction
-from .models import QuizAttempt, Lecture, LectureQuality, Course, CoursePricingPlan, CoursePlanPrice
-from moviepy.editor import VideoFileClip, AudioFileClip
+from .models import QuizAttempt, Lecture, LectureQuality, CoursePlan, PlanPrice
 
 def atomic_post_save(sender, instance, **kwargs):
     if hasattr(instance, "atomic_post_save") and transaction.get_connection().in_atomic_block:
@@ -13,7 +12,7 @@ def atomic_post_save(sender, instance, **kwargs):
 post_save.connect(atomic_post_save)
 
 
-@receiver(pre_save, sender=CoursePricingPlan)
+@receiver(pre_save, sender=CoursePlan)
 def pre_save_course_pricing_plan(sender, instance, *args, **kwargs):
     
     if instance.lifetime_access:
@@ -31,7 +30,7 @@ def pre_save_course_pricing_plan(sender, instance, *args, **kwargs):
         instance.course.is_free = False
         instance.course.save()
 
-# @receiver(post_save, sender=CoursePricingPlan)
+# @receiver(post_save, sender=CoursePlan)
 # def post_save_course_pricing_plan(sender, instance=None, created=False, **kwargs):
 #     prices = instance.prices.filter(is_active=True)
 #     if prices.count() == 1:
@@ -40,7 +39,7 @@ def pre_save_course_pricing_plan(sender, instance, *args, **kwargs):
 #         price.save()
         
         
-@receiver(pre_save, sender=CoursePlanPrice)
+@receiver(pre_save, sender=PlanPrice)
 def pre_save_course_plan_prices(sender, instance, *args, **kwargs):
     if instance.select_all_countries:
         instance.countries = []
@@ -48,12 +47,12 @@ def pre_save_course_plan_prices(sender, instance, *args, **kwargs):
         instance.amount = 0
         instance.currency = None
     
-@receiver(post_save, sender=CoursePricingPlan)
+@receiver(post_save, sender=CoursePlan)
 def deactivate_plan_prices(sender, instance=None, created=False, **kwargs):
     if instance.is_free_for_all_countries:
         instance.prices.update(is_active=False)
         
-@receiver(post_delete, sender=CoursePricingPlan)
+@receiver(post_delete, sender=CoursePlan)
 def post_delete_course_pricing_plan(sender, instance, **kwargs):
 
     course_has_plans = sender.objects.filter(
@@ -64,12 +63,12 @@ def post_delete_course_pricing_plan(sender, instance, **kwargs):
         instance.course.is_free = True
         instance.course.save()
 
-@receiver(post_save, sender=CoursePlanPrice)
+@receiver(post_save, sender=PlanPrice)
 def deactivate_plan_prices(sender, instance=None, created=False, **kwargs):
     if instance.select_all_countries:
         instance.plan.prices.exclude(id=instance.id).update(is_active=False)
 
-@receiver(post_delete, sender=CoursePlanPrice)
+@receiver(post_delete, sender=PlanPrice)
 def post_delete_plan_price(sender, instance, **kwargs):
    if instance.plan.prices.filter(is_active=True).count() == 1:
        price = instance.plan.prices.first()

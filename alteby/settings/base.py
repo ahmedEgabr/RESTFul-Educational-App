@@ -284,7 +284,7 @@ JAZZMIN_SETTINGS = {
         "courses.LectureQuality": "fas fa-play",
         "courses.CorrectInfo": "fas fa-info-circle",
         "courses.CourseActivity": "fas fa-chart-bar",
-        "courses.CoursePricingPlan":"fas fa-money-check-alt",
+        "courses.CoursePlan":"fas fa-money-check-alt",
         "courses.Discussion": "fas fa-comments",
         "courses.Feedback": "fas fa-envelope",
         "courses.Note": "fas fa-sticky-note",
@@ -353,7 +353,9 @@ IP_GEO_WHITELISTED_VIEWS = [
     "CourseList",
     "FeaturedCoursesList",
     "CourseDetail", 
-    "CoursePricingPlanList",
+    "CoursePlanList",
     "EnrolledCourses",
     "CategoryFilter"
     ]
+
+COUNT_OFFSET = 1000

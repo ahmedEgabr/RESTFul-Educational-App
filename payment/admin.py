@@ -9,7 +9,7 @@ from .models import CourseEnrollment
 class CourseEnrollmentConfig(admin.ModelAdmin):
     model = CourseEnrollment
     change_form_template = 'admin/forms/course_enrollment_change_form.html'
-
+    
     list_filter = (
         'user',
         'course',
@@ -24,7 +24,7 @@ class CourseEnrollmentConfig(admin.ModelAdmin):
     )
     ordering = ('-created_at',)
     list_display = ('user', 'course', 'payment_method', 'payment_type', 'enrollment_date', 'is_expired')
-    readonly_fields = ("created_at", "created_by", "enrollment_date", "expiry_date")
+    readonly_fields = ("created_at", "created_by", "enrollment_date", "expiry_date", "email", "username")
     fieldsets = (
         ("Enrollment Information", {'fields':
         (
@@ -41,10 +41,24 @@ class CourseEnrollmentConfig(admin.ModelAdmin):
         'expiry_date',
         'force_expiry',
         'is_active',
-        'created_by'
+        'created_by',
         )
         }),
+        ("User information", {
+            "fields": (
+                "email",
+                "username"
+            )
+        })
     )
+    
+    @staticmethod
+    def email(object):
+        return object.user.email
+    
+    @staticmethod
+    def username(object):
+        return object.user.username
     
     @staticmethod
     def expiry_date(object):

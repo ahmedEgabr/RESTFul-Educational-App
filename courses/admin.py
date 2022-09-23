@@ -5,7 +5,7 @@ from django import forms
 from alteby.admin_sites import main_admin
 from django.db import transaction
 from nested_inline.admin import NestedStackedInline, NestedModelAdmin
-from .admin_forms import LectureForm, LecturePrivacyPriceForm, CoursePlanPriceForm, LectureOverlapForm
+from .admin_forms import LectureForm, LecturePrivacyPriceForm, PlanPriceForm, LectureOverlapForm
 from courses.models import (
 Course, CoursePrivacy,
 CourseAttachement,
@@ -26,8 +26,8 @@ Unit,
 Topic, LectureOverlap,
 LectureQuality,
 Note,
-CoursePricingPlan,
-CoursePlanPrice,
+CoursePlan,
+PlanPrice,
 Privacy
 )
 from .tasks import detect_and_convert_lecture_qualities, extract_and_set_lecture_audio
@@ -169,10 +169,9 @@ class CoursePrivacyInline(nested_admin.NestedStackedInline):
     'available_from',
     'enrollment_duration',
     'enrollment_duration_type',
-    # 'is_downloadable',
-    # 'is_downloadable_for_enrolled_users_only',
-    # 'is_quiz_available',
-    # 'is_quiz_available_for_enrolled_users_only',
+    'is_free',
+    'discount_percentage',
+    'show_contact_admin_on_free_enrollment',
     'is_attachements_available',
     "is_attachements_available_for_enrolled_users_only"
     )
@@ -199,9 +198,9 @@ class CourseAttachementsInline(nested_admin.NestedStackedInline):
         qs = super(CourseAttachementsInline, self).get_queryset(request)
         return qs.select_related("course")
 
-class CoursePlanPriceFormsetBase(forms.models.BaseInlineFormSet):
+class PlanPriceFormsetBase(forms.models.BaseInlineFormSet):
     def clean(self):
-        super(CoursePlanPriceFormsetBase, self).clean()
+        super(PlanPriceFormsetBase, self).clean()
         if not self.instance.is_free_for_all_countries:
             initial_num = len(list(filter(lambda f: not self._should_delete_form(f), self.initial_forms)))
             extra_num = len(list(filter(lambda f: f.has_changed() and not self._should_delete_form(f), self.extra_forms)))
@@ -209,17 +208,18 @@ class CoursePlanPriceFormsetBase(forms.models.BaseInlineFormSet):
                 raise forms.ValidationError("Pricing plan must has at least one price.")
 
 
-CoursePlanPriceFormset = forms.models.inlineformset_factory(
-CoursePricingPlan, CoursePlanPrice, formset=CoursePlanPriceFormsetBase, form=CoursePlanPriceForm
+
+PlanPriceFormset = forms.models.inlineformset_factory(
+CoursePlan, PlanPrice, formset=PlanPriceFormsetBase, form=PlanPriceForm
 )
 
-class CoursePlanPriceInline(admin.StackedInline):
-    model = CoursePlanPrice
+class PlanPriceInline(admin.StackedInline):
+    model = PlanPrice
     can_delete = True
     extra = 0
     verbose_name_plural = 'Prices'
     fk_name = 'plan'
-    formset = CoursePlanPriceFormset
+    formset = PlanPriceFormset
     fieldsets = (
         (None, {
         'fields': (
@@ -235,13 +235,13 @@ class CoursePlanPriceInline(admin.StackedInline):
         )}),
     )
     def get_queryset(self, request):
-        qs = super(CoursePlanPriceInline, self).get_queryset(request)
+        qs = super(PlanPriceInline, self).get_queryset(request)
         return qs.select_related("plan")
 
 
-@admin.register(CoursePricingPlan, site=main_admin)
-class CoursePricingPlanConfig(admin.ModelAdmin):
-    model = CoursePricingPlan
+@admin.register(CoursePlan, site=main_admin)
+class CoursePlanConfig(admin.ModelAdmin):
+    model = CoursePlan
 
     list_filter = ('course', 'duration', 'duration_type', 'lifetime_access', 'is_default', 'is_active', 'created_at')
     ordering = ('-created_at',)
@@ -267,10 +267,10 @@ class CoursePricingPlanConfig(admin.ModelAdmin):
     
     def render_change_form(self, request, context, add=False, change=False, form_url='', obj=None):
 
-        return super(CoursePricingPlanConfig, self).render_change_form(
+        return super(CoursePlanConfig, self).render_change_form(
             request, context, add, change, form_url, obj)
 
-    inlines = [CoursePlanPriceInline]
+    inlines = [PlanPriceInline]
 
 
 @admin.register(Course, site=main_admin)
@@ -324,12 +324,12 @@ class CourseConfig(nested_admin.NestedModelAdmin):
         super(CourseConfig, self).save_model(request, obj, form, change)
 
     def response_add(self, request, obj, post_url_continue=None):
-        url = reverse('admin:%s_%s_add' % ("courses",  "coursepricingplan"))
+        url = reverse('admin:%s_%s_add' % ("courses",  "courseplan"))
         return redirect(url)
     
     def response_change(self, request, obj):
         if not obj.pricing_plans.all():
-            url = reverse('admin:%s_%s_add' % ("courses",  "coursepricingplan"))
+            url = reverse('admin:%s_%s_add' % ("courses",  "courseplan"))
             return redirect(url)
         return super(CourseConfig, self).response_change(request, obj)
 
@@ -365,11 +365,6 @@ class LecturePrivacyInline(nested_admin.NestedStackedInline):
     fields = (
     'option',
     'shared_with',
-    # 'duration',
-    # 'duration_type',
-    # 'available_from',
-    # 'enrollment_duration',
-    # 'enrollment_duration_type',
     'is_downloadable',
     'is_downloadable_for_enrolled_users_only',
     'is_quiz_available',
