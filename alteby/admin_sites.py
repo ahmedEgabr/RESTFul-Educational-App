@@ -1,6 +1,6 @@
 from django.contrib.admin import AdminSite
 from django.contrib.admin.apps import AdminConfig
-from .constants import TEACHER_GROUP, STUDENT_GROUP
+from .constants import TEACHER_GROUP, MODERATOR_GROUP
 from django.db.models import Q
 
 class MainAdmin(AdminSite):
@@ -13,16 +13,22 @@ class MainAdmin(AdminSite):
         Return True if the given HttpRequest has permission to view
         *at least one* page in the admin site.
         """
-        allowed_groups = []
-
+        allowed_groups = [MODERATOR_GROUP]
         if hasattr(request.user, "is_blocked"):
             if request.user.is_blocked:
                 return False
 
+        if request.user.is_superuser:
+            return True
+        
+        if request.user.is_staff:
+            return True
+        
         is_allowed = request.user.groups.filter(name__in=allowed_groups).exists()
-        if not (request.user.is_active and request.user.is_superuser or is_allowed):
-            return False
-        return True
+        if request.user.is_active or request.user.is_superuser or is_allowed:
+            return True
+        
+        return False
 
 
 class MainAdminConfig(AdminConfig):

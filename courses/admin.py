@@ -7,7 +7,9 @@ from django.db import transaction
 from nested_inline.admin import NestedStackedInline, NestedModelAdmin
 from .admin_forms import LectureForm, LecturePrivacyPriceForm, CoursePlanPriceForm, LectureOverlapForm
 from courses.models import (
-Course, CoursePrivacy,
+Course, 
+CoursesGroup,
+CoursePrivacy,
 CourseAttachement,
 LectureAttachement,
 LectureExternalLink,
@@ -27,13 +29,12 @@ Topic, LectureOverlap,
 LectureQuality,
 Note,
 CoursePricingPlan,
-CoursePlanPrice,
-Privacy
+CoursePlanPrice
 )
 from .tasks import detect_and_convert_lecture_qualities, extract_and_set_lecture_audio
 from django.core.exceptions import ValidationError
 from alteby.utils import render_alert
-
+from alteby.constants import MODERATOR_GROUP
 main_admin.register(QuizAttempt)
 main_admin.register(Unit)
 main_admin.register(Topic)
@@ -42,6 +43,17 @@ main_admin.register(CorrectInfo)
 main_admin.register(Report)
 import nested_admin
 
+
+@admin.register(CoursesGroup, site=main_admin)
+class CoursesGroupConfig(admin.ModelAdmin):
+    model = CoursesGroup
+    list_filter = ('name', )
+    list_display = ('name', )
+    filter_horizontal = ("courses", )
+    fieldsets = (
+        (None, {'fields': ('name', 'courses')}),
+    )
+    
 @admin.register(Note, site=main_admin)
 class NoteConfig(admin.ModelAdmin):
     model = Note
@@ -278,6 +290,10 @@ class CourseConfig(nested_admin.NestedModelAdmin):
     list_display = ('title', 'date_created')
     readonly_fields = ('is_free', 'created_by', 'updated_by')
     inlines = [CoursePrivacyInline, CourseAttachementsInline, CourseUnitsInline]
+    list_select_related = [
+        "created_by",
+        "updated_by"
+    ]
     fieldsets = (
         ("Course Information", {
         'fields': (
@@ -329,7 +345,12 @@ class CourseConfig(nested_admin.NestedModelAdmin):
             return redirect(url)
         return super(CourseConfig, self).response_change(request, obj)
 
-
+    def get_queryset(self, request):
+        queryset = super(CourseConfig, self).get_queryset(request)
+        if request.user.is_superuser:
+            return queryset
+        return request.user.get_courses_to_moderate()
+        
 class LectureAttachementsInline(nested_admin.NestedStackedInline):
     model = LectureAttachement
     exclude = ['created_by', 'updated_by']

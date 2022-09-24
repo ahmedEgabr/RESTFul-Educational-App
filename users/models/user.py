@@ -1,3 +1,4 @@
+from tkinter.tix import Tree
 from django.db import models, transaction
 from django.utils import timezone
 from django.core.validators import MinValueValidator
@@ -12,6 +13,7 @@ from users.managers import UserManager
 from django_countries.fields import CountryField
 from .student import Student
 from .teacher import Teacher
+
 
 # Account Model
 class User(AbstractBaseUser, PermissionsMixin):
@@ -31,7 +33,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     blank=True, null=True, default=0, validators=[MinValueValidator(0)], verbose_name="Screenshots Taken"
     )
     country = CountryField(blank=True, blank_label='(select country)')
-
+    
+    # Courses Moderation
+    courses = models.ManyToManyField("courses.Course", blank=True)
+    courses_groups = models.ManyToManyField("courses.CoursesGroup", blank=True)
+    
     objects = UserManager()
 
     USERNAME_FIELD = 'email'
@@ -192,3 +198,12 @@ class User(AbstractBaseUser, PermissionsMixin):
         if not enrolled_courses_ids:
             return Course.objects.none()
         return Course.objects.filter(id__in=enrolled_courses_ids)
+    
+    def get_courses_to_moderate(self):
+        from courses.models.course import Course
+        if not (self.is_staff or self.is_superuser):
+            return Course.objects.none()
+        courses = self.courses.values_list("id", flat=True)
+        return Course.objects.filter(
+            id__in=list(self.courses_groups.values_list("courses__id", flat=True)) + list(courses)
+        )

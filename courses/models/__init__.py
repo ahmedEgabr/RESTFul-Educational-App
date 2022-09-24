@@ -1,4 +1,5 @@
 from .course import Course
+from .courses_group import CoursesGroup
 from .lecture import Lecture
 from .lecture_overlap import LectureOverlap
 from .lecture_quality import LectureQuality

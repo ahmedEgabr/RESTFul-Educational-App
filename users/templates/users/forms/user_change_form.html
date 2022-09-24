@@ -1,0 +1,47 @@
+{% extends "admin/change_form.html" %}
+{% load static %}
+{{inline_admin_formset}}
+{% block admin_change_form_document_ready %}
+{{ block.super }}
+<script src="{% static 'courses/js/jquery-3.3.1.min.js' %}"></script>
+<script>
+   console.log(111)
+   var IsActive = $("#id_is_active")
+   var IsBlocked = django.jQuery("#id_is_blocked")
+
+   function hideIsActive(){
+      IsActive.parent().parent().parent().hide()
+      IsActive.attr("disabled", "disabled")
+   }
+
+   function showIsActive(){
+      IsActive.parent().parent().parent().show()
+      IsActive.attr("disabled", null)
+      }
+
+   django.jQuery("#id_is_blocked").click(function(){
+      
+      if(IsBlocked.is(':checked')){
+         hideIsActive(IsActive)
+      }else{
+         showIsActive(IsActive)
+      }
+
+    })
+
+   function initiatePermissionTab(){
+
+      if(IsBlocked.is(':checked')){
+         hideIsActive()
+      }else{
+         showIsActive()
+      }
+
+   }
+
+   django.jQuery(document).ready(function(){
+      initiatePermissionTab()
+})
+</script>
+
+{% endblock %}

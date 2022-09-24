@@ -13,6 +13,7 @@ from django.contrib import messages
 class UserConfig(UserAdmin):
     model = User
     change_password_form = AdminPasswordChangeForm
+    change_form_template = 'users/forms/user_change_form.html'
     actions = ["activate_selected_users", "deactivate_selected_users", "block_selected_users"]
     list_filter = ('email', 'username', 'is_active', 'is_blocked', 'is_student', 'is_teacher', 'is_promoter', 'is_superuser', 'is_staff', 'screenshots_taken')
     ordering = ('-date_joined',)
@@ -22,8 +23,16 @@ class UserConfig(UserAdmin):
 
     fieldsets = (
         ("User Information", {'fields': ('email', 'username', 'password', 'screenshots_taken')}),
-        ('Permissions', {'fields': ('is_staff', 'is_active', 'is_blocked', 'is_student', 'is_teacher', 'is_promoter', 'is_superuser', 'groups', 'user_permissions')}),
+        ('Permissions', {'fields': (
+            'is_staff', 'is_superuser', 
+            'is_student', 'is_teacher', 'is_promoter',
+            'is_active', 'is_blocked', 
+            'groups', 
+            'user_permissions'
+        )}),
+        ('Courses Moderation', {'fields': ('courses', 'courses_groups')})
     )
+    filter_horizontal = ("courses", "courses_groups", "groups", "user_permissions")
 
     def activate_selected_users(self, request, queryset):
         queryset = queryset.prefetch_related("teacher_profile", "student_profile")

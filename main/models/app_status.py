@@ -8,7 +8,7 @@ class AppStatus(TimeStampedModel):
     """ AppStatus model """
 
     is_online = models.BooleanField(default=True)
-    is_under_maintenance = models.BooleanField(default=True)
+    is_under_maintenance = models.BooleanField(default=False)
     reason = models.TextField(blank=True)
     downtime_till = models.DateTimeField(blank=True, null=True)
 

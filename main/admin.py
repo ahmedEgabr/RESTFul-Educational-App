@@ -46,7 +46,7 @@ class AppVersionConfig(admin.ModelAdmin):
 class AppStatusConfig(admin.ModelAdmin):
     list_display = ('is_online', 'is_under_maintenance', 'downtime_till')
     readonly_fields = ('created_at', 'updated_at')
-
+    change_form_template = 'main/forms/app_status_change_form.html'
     fieldsets = (
         (None, {
         'fields': (
