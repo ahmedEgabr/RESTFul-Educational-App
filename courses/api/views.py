@@ -263,7 +263,6 @@ class CourseIndex(APIView):
 
         filter_kwargs = {
             'id': course_id,
-            'is_active': True
         }
         prefetch_lectures = Prefetch(
             'units__topics__assigned_lectures__lecture',

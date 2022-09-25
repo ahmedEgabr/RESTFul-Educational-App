@@ -171,12 +171,12 @@ class CoursePrivacySerializer(serializers.ModelSerializer):
         "id",
         "course",
         "option",
-        "available_from",
-        "is_available_during_limited_duration",
-        "duration",
-        "duration_type",
-        "enrollment_duration",
-        "enrollment_duration_type",
+        # "available_from",
+        # "is_available_during_limited_duration",
+        # "duration",
+        # "duration_type",
+        # "enrollment_duration",
+        # "enrollment_duration_type",
         # "is_downloadable",
         # "is_downloadable_for_enrolled_users_only",
         # "is_quiz_available",
@@ -505,7 +505,7 @@ class CourseSerializer(serializers.ModelSerializer, QuerySerializerMixin):
         request = self.context.get('request', None)
         pricing_plan = course.get_default_pricing_plan(request)
         if not pricing_plan:
-            return []
+            return None
         return CoursePricingPlanSerializer(pricing_plan, many=False).data
 
 
@@ -573,7 +573,7 @@ class CoursesSerializer(serializers.ModelSerializer, QuerySerializerMixin):
         request = self.context.get('request', None)
         pricing_plan = course.get_default_pricing_plan(request)
         if not pricing_plan:
-            return []
+            return None
         return CoursePricingPlanSerializer(pricing_plan, many=False).data
 
 

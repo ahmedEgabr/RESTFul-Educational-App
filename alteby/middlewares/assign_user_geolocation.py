@@ -13,6 +13,7 @@ class AssignUserGeoLocation(MiddlewareMixin):
             ip_utils = IPUtils(ip=user_ip)
             request.country = ip_utils.country
             request.city = ip_utils.city
+            request.country = "EG"
         else:
             request.country = "EG"
             request.city = None

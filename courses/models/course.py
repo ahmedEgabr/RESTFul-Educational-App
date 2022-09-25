@@ -131,7 +131,6 @@ class Course(UserActionModel):
         return CoursePricingPlan.create_default_pricing_plan(course=self)
     
     def get_pricing_plans(self, request):
-
         queryset = self.pricing_plans
         if not queryset.exists():
             return []
@@ -164,7 +163,6 @@ class Course(UserActionModel):
                 models.Q(prices__countries__regex=country_regex)
             ),
             is_active=True,
-            is_default=False,
             ).distinct()
         if not pricing_plans:
             pricing_plans = queryset.filter(is_default=True, is_active=True) 
@@ -187,28 +185,28 @@ class Course(UserActionModel):
             ).order_by("amount")
 
         default_prices_filter = CoursePlanPrice.objects.filter(
+            models.Q(is_default=True),
             plan__course=self,
-            is_default=True,
             is_active=True
-            ) 
+            ).order_by("amount")
         
         queryset = queryset.prefetch_related(
-            models.Prefetch("prices", queryset=prices_filter_queryset if prices_filter_queryset else  default_prices_filter)
+            models.Prefetch("prices", queryset=default_prices_filter if default_prices_filter else prices_filter_queryset)
         )
         
         # Check for free plans  available for request country
         pricing_plan = queryset.filter(
             models.Q(is_free_for_all_countries=True) | (
                 models.Q(prices__countries__regex=country_regex) & 
-                models.Q(prices__is_free_for_selected_countries=True) &
-                models.Q(prices__is_active=True) |
+                models.Q(prices__is_free_for_selected_countries=True) |
                 models.Q(prices__countries__regex=country_regex)
-            ),
+            ) & models.Q(prices__is_active=True),
             is_active=True
-            ).first()
+            ).order_by("prices__amount").first()
         
         if not pricing_plan:
             pricing_plan = queryset.filter(is_active=True, is_default=True).first()
+            
         return pricing_plan
     
     def is_enrolled(self, user):
