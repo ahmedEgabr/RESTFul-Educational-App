@@ -16,6 +16,7 @@ from categories.api.serializers import CategorySerializer, TagSerializer
 from users.api.serializers import TeacherSerializer, BasicUserSerializer
 from question_banks.models import QuestionAnswer
 from question_banks.serializers import QuestionSerializer, ChoiceSerializer
+from utility import humansize
 
 
 class CoursePathSerializer(serializers.ModelSerializer):
@@ -26,13 +27,13 @@ class CoursePathSerializer(serializers.ModelSerializer):
 class UnitPathSerializer(serializers.ModelSerializer):
     course = CoursePathSerializer(many=False, read_only=True)
     class Meta:
-        model = Lecture
+        model = Unit
         fields = ('id', 'title', 'course')
         
 class TopicPathSerializer(serializers.ModelSerializer):
     unit = UnitPathSerializer(many=False, read_only=True)
     class Meta:
-        model = Lecture
+        model = Topic
         fields = ('id', 'title', 'unit')
         
 class LecturePathSerializer(serializers.ModelSerializer):
@@ -213,6 +214,28 @@ class CourseActivitySerializer(serializers.ModelSerializer):
         model = CourseActivity
         fields = '__all__'
 
+class LectureQualitySerializer(serializers.ModelSerializer):
+    quality = serializers.SerializerMethodField()
+    size = serializers.SerializerMethodField()
+    class Meta:
+        model = LectureQuality
+        exclude = ('lecture', 'id')
+
+    def get_quality(self, lecture_quality):
+        return lecture_quality.get_quality_display()
+    
+    def get_size(self, lecture_quality):
+        if not lecture_quality.video:
+            return "0 KB"
+        return humansize(lecture_quality.video.size)
+
+
+class LectureExternalLinkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LectureExternalLink
+        fields = "__all__"
+
+
 class DemoLectureSerializer(serializers.ModelSerializer):
     teacher = TeacherSerializer(many=False, read_only=True)
     viewed = serializers.BooleanField()
@@ -222,6 +245,8 @@ class DemoLectureSerializer(serializers.ModelSerializer):
     has_audio = serializers.SerializerMethodField()
     has_script = serializers.SerializerMethodField()
     path = serializers.SerializerMethodField()
+    qualities = LectureQualitySerializer(many=True, read_only=True)
+    size = serializers.SerializerMethodField()
 
     class Meta:
         model = Lecture
@@ -230,6 +255,9 @@ class DemoLectureSerializer(serializers.ModelSerializer):
         'title',
         'description',
         'objectives',
+        'video',
+        'size',
+        'qualities',
         'order',
         'topic',
         'path',
@@ -262,27 +290,18 @@ class DemoLectureSerializer(serializers.ModelSerializer):
         if not topic_id:
             topic_id = lecture.assigned_topics.first().topic_id
         return LecturePathSerializer(lecture, context={"topic_id": topic_id}).data
-
-class LectureQualitySerializer(serializers.ModelSerializer):
-    quality = serializers.SerializerMethodField()
-    class Meta:
-        model = LectureQuality
-        exclude = ('lecture', 'id')
-
-    def get_quality(self, lecture_quality):
-        return lecture_quality.get_quality_display()
-
-
-class LectureExternalLinkSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = LectureExternalLink
-        fields = "__all__"
+    
+    def get_size(self, lecture):
+        if not lecture.video:
+            return "0 KB"
+        return humansize(lecture.video.size)
 
 
 class FullLectureSerializer(DemoLectureSerializer):
     teacher = TeacherSerializer(many=False, read_only=True)
     qualities = LectureQualitySerializer(many=True, read_only=True)
     path = serializers.SerializerMethodField()
+    size = serializers.SerializerMethodField()
     class Meta:
         model = Lecture
         fields = (
@@ -292,6 +311,7 @@ class FullLectureSerializer(DemoLectureSerializer):
         'description',
         'objectives',
         'video',
+        'size',
         'qualities',
         'teacher',
         'audio',
@@ -316,6 +336,11 @@ class FullLectureSerializer(DemoLectureSerializer):
             topic_id = lecture.assigned_topics.first().topic_id
         return LecturePathSerializer(lecture, context={"topic_id": topic_id}).data
 
+    def get_size(self, lecture):
+        if not lecture.video:
+            return "0 KB"
+        return humansize(lecture.video.size)
+    
 class QuerySerializerMixin(object):
     PREFETCH_FIELDS = [] # Here is for M2M fields
     RELATED_FIELDS = [] # Here is for ForeignKeys

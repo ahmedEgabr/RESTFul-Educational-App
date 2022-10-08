@@ -1,5 +1,6 @@
 from django.db import models
 
+
 class LectureQuality(models.Model):
 
     class Qualities(models.IntegerChoices):
@@ -26,3 +27,5 @@ class LectureQuality(models.Model):
     def get_quality_display(self):
         quality = getattr(self.Qualities, f'_{self.quality}')
         return quality.label
+
+print(LectureQuality.Qualities.choices)
