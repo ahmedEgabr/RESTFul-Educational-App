@@ -359,3 +359,6 @@ IP_GEO_WHITELISTED_VIEWS = [
     ]
 
 COUNT_OFFSET = 1000
+
+PUBLIC_KEY_ROOT = os.path.join(BASE_DIR, "utility/keys/public-key.key")
+PRIVATE_KEY_ROOT = os.path.join(BASE_DIR, "utility/keys/private-key.key")
