@@ -15,7 +15,7 @@ class LectureQuality(models.Model):
 
     lecture = models.ForeignKey("courses.Lecture", on_delete=models.CASCADE, related_name="qualities")
     video = models.FileField()
-    quality = models.CharField(choices=Qualities.choices, max_length=20)
+    quality = models.IntegerField(choices=Qualities.choices)
 
     class Meta:
         verbose_name_plural = 'Lecture Qualities'
@@ -27,5 +27,3 @@ class LectureQuality(models.Model):
     def get_quality_display(self):
         quality = getattr(self.Qualities, f'_{self.quality}')
         return quality.label
-
-print(LectureQuality.Qualities.choices)
