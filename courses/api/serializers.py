@@ -224,10 +224,13 @@ class LectureQualitySerializer(serializers.ModelSerializer):
     def get_quality(self, lecture_quality):
         return lecture_quality.get_quality_display()
     
-    def get_size(self, lecture_quality):
-        if not lecture_quality.video:
-            return "0 KB"
-        return humansize(lecture_quality.video.size)
+    def get_size(self, obj):
+        if not obj.video:
+                return "0 KB"
+        try:
+            return humansize(obj.video.size)
+        except IOError:
+            return  "0 KB"
 
 
 class LectureExternalLinkSerializer(serializers.ModelSerializer):
@@ -294,7 +297,10 @@ class DemoLectureSerializer(serializers.ModelSerializer):
     def get_size(self, lecture):
         if not lecture.video:
             return "0 KB"
-        return humansize(lecture.video.size)
+        try:
+            return humansize(lecture.video.size)
+        except IOError:
+            return  "0 KB"
 
 
 class FullLectureSerializer(DemoLectureSerializer):
@@ -339,7 +345,10 @@ class FullLectureSerializer(DemoLectureSerializer):
     def get_size(self, lecture):
         if not lecture.video:
             return "0 KB"
-        return humansize(lecture.video.size)
+        try:
+            return humansize(lecture.video.size)
+        except IOError:
+            return  "0 KB"
     
 class QuerySerializerMixin(object):
     PREFETCH_FIELDS = [] # Here is for M2M fields
