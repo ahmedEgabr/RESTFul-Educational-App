@@ -44,7 +44,7 @@ class CoursePermissionMiddleware(MiddlewareMixin):
                 id=course_id,
                 is_active=True
             ).exclude(
-                Q(assigned_topics__topic__unit__course__privacy__option=Privacy.PRIVACY_CHOICES.shared) &
+                Q(assigned_topics__topic__unit__course__privacy__option=Privacy.PrivacyType.SHARED) &
                 ~Q(assigned_topics__topic__unit__course__privacy__shared_with__in=[request.user])
             )
             if not course:

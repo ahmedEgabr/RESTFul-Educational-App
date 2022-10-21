@@ -5,7 +5,7 @@ from django import forms
 from alteby.admin_sites import main_admin
 from django.db import transaction
 from nested_inline.admin import NestedStackedInline, NestedModelAdmin
-from .admin_forms import LectureForm, LecturePrivacyPriceForm, CoursePlanPriceForm, LectureOverlapForm
+from .admin_forms import LectureForm, LecturePrivacyForm, CoursePlanPriceForm, LectureOverlapForm
 from courses.models import (
 Course, 
 CoursesGroup,
@@ -181,8 +181,7 @@ class CoursePrivacyInline(nested_admin.NestedStackedInline):
     'available_from',
     'enrollment_duration',
     'enrollment_duration_type',
-    'is_attachements_available',
-    "is_attachements_available_for_enrolled_users_only"
+    'attachments_status',
     )
     exclude = ['created_by', 'updated_by']
     can_delete = False
@@ -378,16 +377,13 @@ class LectureQuizInline(nested_admin.NestedStackedInline):
     
 class LecturePrivacyInline(nested_admin.NestedStackedInline):
     model = LecturePrivacy
-    form = LecturePrivacyPriceForm
+    form = LecturePrivacyForm
     fields = (
     'option',
     'shared_with',
-    'is_downloadable',
-    'is_downloadable_for_enrolled_users_only',
-    'is_quiz_available',
-    'is_quiz_available_for_enrolled_users_only',
-    'is_attachements_available',
-    "is_attachements_available_for_enrolled_users_only"
+    'download_status',
+    'quiz_status',
+    'attachments_status'
     )
     exclude = ['created_by', 'updated_by']
     can_delete = False

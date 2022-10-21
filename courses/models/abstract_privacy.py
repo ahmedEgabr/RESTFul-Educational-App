@@ -8,21 +8,20 @@ from main.utility_models import UserActionModel, TimeStampedModel, DateFormat
 
 class Privacy(UserActionModel, TimeStampedModel):
 
-    PRIVACY_CHOICES = Choices(
-        ('public', 'Public'),
-        ('private', 'Private'),
-        ('shared', 'Shared'),
-        ('limited_duration', 'Public (for a Limited duration)'),
-    )
-
-    option = models.CharField(max_length=20, choices=PRIVACY_CHOICES, default=PRIVACY_CHOICES.private)
-    shared_with = models.ManyToManyField("users.User", blank=True)
+    class AvailabilityStatus(models.IntegerChoices):
+        DISABLED = 0, "Disabled" 
+        AVAILABLE_FOR_ALL_USERS = 1, "Available for all users"
+        AVAILABLE_FOR_ENROLLED = 2, "Available ONLY for Enrolled Users"
     
-    is_attachements_available = models.BooleanField(default=True, verbose_name="Is Attachemets Available")
-    is_attachements_available_for_enrolled_users_only = models.BooleanField(
-    default=True,
-    verbose_name="Is Attachements Available for Enrolled Users Only",
-    )
+    class PrivacyType(models.TextChoices):
+        PUBLIC = "public", "Public" 
+        PRIVATE = "private", "Private"
+        SHARED = "shared", "Shared"
+        LIMITED_DURATION = "limited_duration", "Public (for a Limited duration)"
+
+    option = models.CharField(max_length=20, choices=PrivacyType.choices, default=PrivacyType.PRIVATE)
+    shared_with = models.ManyToManyField("users.User", blank=True)
+    attachments_status = models.IntegerField(choices=AvailabilityStatus.choices, default=AvailabilityStatus.AVAILABLE_FOR_ENROLLED)
 
     class Meta:
         abstract = True
@@ -34,22 +33,22 @@ class Privacy(UserActionModel, TimeStampedModel):
 
     @property
     def is_public(self):
-        return self.option == self.PRIVACY_CHOICES.public
+        return self.option == self.PrivacyType.PUBLIC
 
     @property
     def is_public_for_limited_duration(self):
-        return self.option == self.PRIVACY_CHOICES.limited_duration
+        return self.option == self.PrivacyType.LIMITED_DURATION
 
     @property
     def is_private(self):
-        return self.option == self.PRIVACY_CHOICES.private
+        return self.option == self.PrivacyType.PRIVATE
 
     @property
     def is_shared(self):
-        return self.option == self.PRIVACY_CHOICES.shared
+        return self.option == self.PrivacyType.SHARED
 
     def reset_privacy_to_private(self):
-        self.option = self.PRIVACY_CHOICES.private
+        self.option = self.PrivacyType.PRIVATE
         self.save()
 
     @property

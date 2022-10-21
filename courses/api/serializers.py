@@ -172,18 +172,7 @@ class CoursePrivacySerializer(serializers.ModelSerializer):
         "id",
         "course",
         "option",
-        # "available_from",
-        # "is_available_during_limited_duration",
-        # "duration",
-        # "duration_type",
-        # "enrollment_duration",
-        # "enrollment_duration_type",
-        # "is_downloadable",
-        # "is_downloadable_for_enrolled_users_only",
-        # "is_quiz_available",
-        # "is_quiz_available_for_enrolled_users_only",
-        "is_attachements_available",
-        "is_attachements_available_for_enrolled_users_only",
+        'attachments_status',
         "shared_with"
         )
 
@@ -194,18 +183,9 @@ class LecturePrivacySerializer(serializers.ModelSerializer):
         "id",
         "lecture",
         "option",
-        # "available_from",
-        # "is_available_during_limited_duration",
-        # "duration",
-        # "durationtype",
-        # "enrollment_duration",
-        # "enrollment_duration_type",
-        "is_downloadable",
-        "is_downloadable_for_enrolled_users_only",
-        "is_quiz_available",
-        "is_quiz_available_for_enrolled_users_only",
-        "is_attachements_available",
-        "is_attachements_available_for_enrolled_users_only",
+        "download_status",
+        "quiz_status",
+        "attachments_status",
         "shared_with"
         )
 

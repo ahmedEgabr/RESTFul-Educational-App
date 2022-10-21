@@ -73,7 +73,7 @@ class CoursePrivacy(Privacy):
           return self.course.title
 
     def clean_fields(self, **kwargs):
-        if self.option == self.PRIVACY_CHOICES.limited_duration:
+        if self.option == self.PrivacyType.LIMITED_DURATION:
             if not self.duration:
                 raise ValidationError({"duration": "Option Public for Limited Duration requeires this field to be set."})
             if not self.available_from:

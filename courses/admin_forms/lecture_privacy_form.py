@@ -2,14 +2,19 @@ from django import forms
 from courses.models import Privacy, LecturePrivacy
 
 
-class LecturePrivacyPriceForm(forms.ModelForm):
+class LecturePrivacyForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         
-        super(LecturePrivacyPriceForm, self).__init__(*args, **kwargs)
-        self.fields['option'].choices = [
-            option for option in Privacy.PRIVACY_CHOICES if option[0] != Privacy.PRIVACY_CHOICES.limited_duration
-            ]
+        super(LecturePrivacyForm, self).__init__(*args, **kwargs)
+        
+        allowed_privacy_choices = [
+            Privacy.PrivacyType.PUBLIC,
+            Privacy.PrivacyType.PRIVATE,
+            Privacy.PrivacyType.SHARED,
+        ]
+        privacy_choices = [choice for choice in Privacy.PrivacyType.choices if choice[0] in allowed_privacy_choices]
+        self.fields["option"].choices = privacy_choices
             
     class Meta:
         model = LecturePrivacy

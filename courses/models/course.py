@@ -239,7 +239,7 @@ class Course(UserActionModel):
     @classmethod
     def get_allowed_courses(cls, user):
         return Course.objects.exclude(
-            models.Q(privacy__option=Privacy.PRIVACY_CHOICES.shared) &
+            models.Q(privacy__option=Privacy.PrivacyType.SHARED) &
             ~models.Q(privacy__shared_with__in=[user]) &
             ~(
                 (
