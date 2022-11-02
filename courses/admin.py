@@ -433,6 +433,7 @@ class LectureConfig(nested_admin.NestedModelAdmin):
         if not change:
             super().save_model(request, new_lecture, form, change)
             new_lecture.detect_and_change_video_duration()
+
             transaction.on_commit(lambda: extract_and_set_lecture_audio.delay(new_lecture.id))
             transaction.on_commit(lambda: detect_and_convert_lecture_qualities.delay(new_lecture.id))
 

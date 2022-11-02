@@ -15,7 +15,7 @@ from moviepy.editor import VideoFileClip
 from courses.utils import get_lecture_path
 from payment.models import CourseEnrollment
 from courses.models.activity import CourseActivity
-
+from utility import check_celery_workers, check_redis_connection
 
 class Lecture(UserActionModel, TimeStampedModel):
     #TODO: remove topic and order and indexes
@@ -41,6 +41,13 @@ class Lecture(UserActionModel, TimeStampedModel):
 
     def __str__(self):
         return f"ID: {self.id} - {self.title}"
+    
+    def clean(self) -> None:
+        super().clean_fields()
+        if not (check_celery_workers() and check_redis_connection()):
+            raise ValidationError({
+                "video": "Cannot update/upload video right now."
+            })
     
     def atomic_post_save(self, sender, created, **kwargs):
         if not hasattr(self, "privacy"):
@@ -123,6 +130,7 @@ class Lecture(UserActionModel, TimeStampedModel):
         out_audio = audio.write_audiofile(audio_path)
 
         self.audio = str(Path(self.video.name).with_suffix('.mp3'))
+        print(str(Path(self.video.name).with_suffix('.mp3')))
         self.save()
         return True
 

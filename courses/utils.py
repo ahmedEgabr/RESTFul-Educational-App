@@ -1,6 +1,8 @@
 import alteby.utils as general_utils
 from moviepy.editor import VideoFileClip
 from datetime import datetime
+import time
+
 
 def get_course(course_id, prefetch_related=None, select_related=None):
     from .models import Course
@@ -79,7 +81,10 @@ def get_resolution(quality):
 def get_lecture_path(instance, filename):
     today = datetime.today().strftime("%d-%m-%Y")
 
-    return 'videos/lectures/{0}/{1}'.format(
-    today,
-    filename
+    file_extension = filename.split(".")[-1]
+    
+    return 'videos/lectures/{0}/{1}.{2}'.format(
+        today,
+        int(time.time()), 
+        file_extension.lower()
     )
