@@ -1,3 +1,6 @@
+import re
+import alteby.utils as general_utils
+from django.db.models import Q
 from django.utils.deprecation import MiddlewareMixin
 from django.urls import resolve, reverse
 from django.http import JsonResponse
@@ -6,13 +9,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes
 from rest_framework import status
 from rest_framework.response import Response
-from courses.models import Course
+from courses.models import Course, Privacy
 from courses.utils import get_object
-from courses.utils import allowed_to_access_course, get_object
-import alteby.utils as general_utils
+from courses.utils import get_object
 from django.conf import settings
 from re import sub
 from rest_framework.authtoken.models import Token
+
 
 class CoursePermissionMiddleware(MiddlewareMixin):
 
@@ -20,22 +23,14 @@ class CoursePermissionMiddleware(MiddlewareMixin):
     def process_request(self, request):
         assert hasattr(request, 'user'), "None"
 
-        self.route = list(filter(None, request.path_info.split('/')))
-        self.route_len = len(self.route)
-
-        if self.route and self.route_len > 2:
-            self.base_route_name = self.route[0]
-            self.route_name = self.route[1]
-            self.course_id = self.route[2]
-        else:
-            return None
-
-        if self.is_index_requested():
-            return None
-
-
-        if self.base_route_name == settings.BASE_PROTECTED_ROUTE and self.route_name == settings.PROTECTED_ROUTE and self.course_id.isdigit():
-
+        request_path = request.path[:-1] if request.path[-1] == "/" else request.path
+        course_path_regix = "^/api/courses\/([0-9]+)(?=[^\/]*)"
+        if re.match(course_path_regix, request_path):
+            
+            if self.is_index_requested(request_path):
+                return None
+            
+            course_id = request_path.split("/")[3]
             header_token = request.META.get('HTTP_AUTHORIZATION', None)
             if header_token is not None:
               try:
@@ -45,21 +40,22 @@ class CoursePermissionMiddleware(MiddlewareMixin):
               except Token.DoesNotExist:
                 return JsonResponse(general_utils.error('page_access_denied'), status=401)
 
-            filter_kwargs = {
-            'id': self.course_id
-            }
-            course, found, error = get_object(model=Course, filter_kwargs=filter_kwargs)
-            if not found:
-                return JsonResponse(error, status=404)
-            if not allowed_to_access_course(request.user, course):
+            course = Course.objects.filter(
+                id=course_id,
+                is_active=True
+            ).exclude(
+                Q(assigned_topics__topic__unit__course__privacy__option=Privacy.PrivacyType.SHARED) &
+                ~Q(assigned_topics__topic__unit__course__privacy__shared_with__in=[request.user])
+            )
+            if not course:
+                return Response(general_utils.error('not_found'), status=status.HTTP_404_NOT_FOUND)
+            
+            if not course.is_allowed_to_access_course(request.user):
                 return JsonResponse(general_utils.error('access_denied'), status=403)
 
-    def is_index_requested(self):
+    def is_index_requested(self, request_path):
 
-        if not len(self.route) > 3:
-            return False
-
-        index_route = self.route[3]
-        if index_route not in settings.ALLOWED_COURSE_ROUTES:
+        course_path_regix = "^/api/courses\/([0-9]+)(?=[^\/]*)/index$"
+        if not re.match(course_path_regix, request_path):
             return False
         return True

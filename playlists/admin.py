@@ -1,7 +1,8 @@
 from django.contrib import admin
+from alteby.admin_sites import main_admin
 from .models import Playlist, Favorite, WatchHistory
 
 
-admin.site.register(Playlist)
-admin.site.register(Favorite)
-admin.site.register(WatchHistory)
+main_admin.register(Playlist)
+main_admin.register(Favorite)
+main_admin.register(WatchHistory)

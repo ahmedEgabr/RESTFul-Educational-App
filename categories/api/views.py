@@ -17,7 +17,7 @@ class CategoryList(APIView, PageNumberPagination):
     List all categories.
     """
     def get(self, request, format=None):
-        categories = Category.objects.all().prefetch_related('course_set')
+        categories = Category.objects.prefetch_related('course_set').all()
         serializer = CategorySerializer(categories, many=True, context={'request': request})
         return Response(serializer.data)
 

@@ -1,5 +1,5 @@
 from django.contrib.auth import authenticate
-from users.models import User, Student
+from users.models import User, Student, Teacher
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
@@ -47,9 +47,6 @@ class SignUpSerializer(serializers.ModelSerializer):
         return user
 
 
-
-
-
 class AuthTokenSerializer(serializers.Serializer):
     email_or_username = serializers.CharField()
     password = serializers.CharField()
@@ -58,38 +55,52 @@ class AuthTokenSerializer(serializers.Serializer):
         email_or_username = attrs.get('email_or_username')
         password = attrs.get('password')
 
-        if email_or_username and password:
-            # Check if user sent email
-            if not validateEmail(email_or_username):
-                try:
-                    user_request = User.objects.get(username=email_or_username)
-                except User.DoesNotExist:
-                    msg = 'Unable to log in with provided credentials.'
-                    raise serializers.ValidationError({
-                        'status': 'error',
-                        'message': msg
-                    })
+        if not (email_or_username or password):
+            msg = 'Must include "email or username" and "password"'
+            raise serializers.ValidationError({
+                'status': 'error',
+                'message': msg
+            })
 
-                email_or_username = user_request.email
-
-            user = authenticate(email=email_or_username, password=password)
-
-            if user:
-                if not user.is_active:
-                    msg = 'User account is disabled.'
-                    raise serializers.ValidationError({
-                        'status': 'error',
-                        'message': msg
-                    })
-
-            else:
-                msg = 'Unable to log in with provided credentials.'
+        # Check if user sent email
+        if not validateEmail(email_or_username):
+            try:
+                user_request = User.objects.get(username=email_or_username, is_student=True)
+            except User.DoesNotExist:
+                msg = 'Incorrect Email/Username or Password.'
                 raise serializers.ValidationError({
                     'status': 'error',
                     'message': msg
                 })
-        else:
-            msg = 'Must include "email or username" and "password"'
+
+            email_or_username = user_request.email
+
+        user = authenticate(email=email_or_username, password=password)
+
+        if not user:
+            msg = 'Incorrect Email/Username or Password.'
+            raise serializers.ValidationError({
+                'status': 'error',
+                'message': msg
+            })
+
+        if user.is_blocked:
+            msg = 'User account has been temporarily blocked due to violating the rules.'
+            raise serializers.ValidationError({
+                'status': 'error',
+                'message': msg
+            })
+
+        if not user.is_active:
+            msg = 'User account is disabled.'
+            raise serializers.ValidationError({
+                'status': 'error',
+                'message': msg
+            })
+
+        user_profile = user.get_student_profile()
+        if not user_profile:
+            msg = 'You are not a student to login.'
             raise serializers.ValidationError({
                 'status': 'error',
                 'message': msg
@@ -115,6 +126,11 @@ class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True)
     new_password = serializers.CharField(required=True)
 
+class BasicUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('id', 'email', "username")
+
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -128,3 +144,17 @@ class StudentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Student
         fields = '__all__'
+
+class TeacherSerializer(serializers.ModelSerializer):
+    id = serializers.SerializerMethodField()
+    username = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Teacher
+        fields = ("id", "username")
+
+    def get_id(self, teacher_profile):
+        return teacher_profile.user_id
+
+    def get_username(self, teacher_profile):
+        return teacher_profile.user.username

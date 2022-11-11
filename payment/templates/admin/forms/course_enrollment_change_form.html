@@ -1,0 +1,50 @@
+{% extends "admin/change_form.html" %}
+{% load static %}
+{{inline_admin_formset}}
+{% block admin_change_form_document_ready %}
+{{ block.super }}
+<script src="{% static 'courses/js/jquery-3.3.1.min.js' %}"></script>
+<script>
+
+   django.jQuery("#id_lifetime_enrollment").click(function(){
+      var lifeTimeEnrollment = $("#id_lifetime_enrollment")
+      var enrollment_duration = $(`#id_enrollment_duration`)
+      var enrollment_duration_type = $(`#id_enrollment_duration_type`)
+
+      if(lifeTimeEnrollment.is(':checked')){
+         enrollment_duration.parent().parent().parent().hide()
+         enrollment_duration_type.parent().parent().parent().hide()
+         enrollment_duration_type.attr("disabled", "disabled")
+      }else{
+         enrollment_duration.parent().parent().parent().show()
+         enrollment_duration.attr("disabled", null)
+         enrollment_duration_type.parent().parent().parent().show()
+         enrollment_duration_type.attr("disabled", null)
+      }
+
+    })
+
+   function InitiateForm(){
+      var lifeTimeEnrollment = django.jQuery('#id_lifetime_enrollment')
+      var enrollment_duration = $(`#id_enrollment_duration`)
+      var enrollment_duration_type = $(`#id_enrollment_duration_type`)
+
+      if(lifeTimeEnrollment.is(':checked')){
+         enrollment_duration.parent().parent().parent().hide()
+         enrollment_duration.attr("disabled", "disabled")
+         enrollment_duration_type.parent().parent().parent().hide()
+         enrollment_duration_type.attr("disabled", "disabled")
+      }else{
+         enrollment_duration.parent().parent().parent().show()
+         enrollment_duration.attr("disabled", null)
+         enrollment_duration_type.parent().parent().parent().show()
+         enrollment_duration_type.attr("disabled", null)
+      }
+   }
+
+   django.jQuery(document).ready(function(){
+      InitiateForm()
+})
+</script>
+
+{% endblock %}

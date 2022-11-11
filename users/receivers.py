@@ -1,6 +1,6 @@
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
-from .models import Student, Teacher, LoggedInUser
+from .models import User, Student, Teacher, LoggedInUser
 from rest_framework.authtoken.models import Token
 from django.conf import settings
 from django.urls import reverse
@@ -15,14 +15,31 @@ UserModel = settings.AUTH_USER_MODEL
 def create_auth_token(sender, instance=None, created=False, **kwargs):
     if created:
         Token.objects.create(user=instance)
+        
+@receiver(pre_save, sender=UserModel)
+def pre_save_user(sender, instance=None, created=False, **kwargs):
+
+    if instance.id:
+        old_instance = User.objects.get(id=instance.id)
+        if old_instance.is_teacher != instance.is_teacher and not instance.is_teacher:
+            instance.delete_teacher_profile()
+        if old_instance.is_student != instance.is_student and not instance.is_student:
+            instance.delete_student_profile()
+        if old_instance.is_promoter != instance.is_promoter and not instance.is_promoter:
+                instance.remove_from_promoter_group()
+        if old_instance.is_promoter != instance.is_promoter and instance.is_promoter:
+                instance.add_to_promoter_group()   
+
 
 @receiver(post_save, sender=UserModel)
-def create_user_profile(sender, instance=None, created=False, **kwargs):
-    if created:
-        Student.objects.create(user=instance)
-        if instance.is_teacher:
-            Teacher.objects.create(user=instance)
-
+def post_save_user(sender, instance=None, created=False, **kwargs):
+    if instance.is_reached_screenshots_limit:
+        instance.block()
+    
+    if instance.is_student and not hasattr(instance, 'student_profile'):
+        instance.create_student_profile()
+    if instance.is_teacher and not hasattr(instance, 'teacher_profile'):
+        instance.create_teacher_profile()     
 
 @receiver(user_logged_in)
 def on_user_logged_in(sender, request, **kwargs):
@@ -32,8 +49,6 @@ def on_user_logged_in(sender, request, **kwargs):
 @receiver(user_logged_out)
 def on_user_logged_out(sender, **kwargs):
     LoggedInUser.objects.filter(user=kwargs.get('user')).delete()
-
-
 
 @receiver(reset_password_token_created)
 def password_reset_token_created(sender, instance, reset_password_token, *args, **kwargs):
@@ -63,7 +78,7 @@ def password_reset_token_created(sender, instance, reset_password_token, *args, 
 
     msg = EmailMultiAlternatives(
         # title:
-        "Password Reset for {title}".format(title="Emtyaz Advisor"),
+        "Password Reset for {title}".format(title="Medical Mentor"),
         # message:
         email_plaintext_message,
         # from:

@@ -1,4 +1,3 @@
-from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework import status
@@ -6,15 +5,10 @@ from rest_framework.views import APIView
 from rest_framework.generics import UpdateAPIView
 from rest_framework import renderers
 from rest_framework import parsers
-from rest_framework.authtoken import views as auth_views
-from rest_framework.compat import coreapi, coreschema
-from rest_framework.schemas import ManualSchema
-from django.http import JsonResponse
 from .serializers import AuthTokenSerializer, SignUpSerializer, StudentSerializer, ChangePasswordSerializer
 from django.core.exceptions import ValidationError
 from users.models import Student
 from courses.api.serializers import CourseSerializer
-from courses.models import Course, Unit
 from users.models import User
 from rest_framework.permissions import IsAuthenticated
 from django_rest_passwordreset.views import ResetPasswordConfirm
@@ -22,15 +16,13 @@ from django_rest_passwordreset.models import ResetPasswordToken
 from django_rest_passwordreset.signals import pre_password_reset, post_password_reset
 from django.contrib.auth.password_validation import validate_password, get_password_validators
 from django_rest_passwordreset.serializers import ResetTokenSerializer
-from rest_framework import exceptions
 from django.conf import settings
 from django.shortcuts import render
 from rest_framework.pagination import PageNumberPagination
 from django.contrib.auth import login
-from django.db.models import Prefetch, Count, Sum, OuterRef, Exists, Subquery, IntegerField, Q, FloatField
-from django.db.models.functions import Coalesce
+from alteby.utils import success as success_response
+from utility import encode_data
 
-from payment.models import CourseEnrollment
 
 class SignIn(APIView):
     throttle_classes = ()
@@ -53,17 +45,21 @@ class SignIn(APIView):
             if not created:
                 token.delete()
                 token, created = Token.objects.get_or_create(user=user)
-
+                
+            encoded_token = encode_data({
+                "id": user.id
+            })
             response = {
                 'token': token.key,
+                'encoded_token': encoded_token,
                 'user_id': user.pk,
                 'email': user.email,
                 'username': user.username,
                 'first_name': user.first_name,
                 'last_name': user.last_name,
-                'year_in_school': user.student_info.year_in_school,
-                'academic_year': user.student_info.academic_year,
-                'major': user.student_info.major
+                'year_in_school': user.student_profile.year_in_school,
+                'academic_year': user.student_profile.academic_year,
+                'major': user.student_profile.major
             }
 
             return Response(response)
@@ -82,16 +78,21 @@ class SignUp(APIView):
             user = serializer.save()
 
             token, created = Token.objects.get_or_create(user=user)
+            encoded_token = encode_data({
+                "id": user.id
+            })
+            
             response = {
                 'token': token.key,
+                'encoded_token': encoded_token,
                 'user_id': user.pk,
                 'email': user.email,
                 'username': user.username,
                 'first_name': user.first_name,
                 'last_name': user.last_name,
-                'year_in_school': user.student_info.year_in_school,
-                'academic_year': user.student_info.academic_year,
-                'major': user.student_info.major
+                'year_in_school': user.student_profile.year_in_school,
+                'academic_year': user.student_profile.academic_year,
+                'major': user.student_profile.major
             }
         else:
             response = serializer.errors
@@ -206,14 +207,32 @@ class EnrolledCourses(APIView, PageNumberPagination):
 
     def get(self, request, user_id):
 
-        courses_ids = request.user.enrollments.values_list('course', flat=True)
+        enrolled_courses = request.user.get_enrolled_courses()
+        if enrolled_courses:
+            enrolled_courses = enrolled_courses.prefetch_related(
+                'tags', 'privacy__shared_with'
+                ).select_related(
+                    'privacy'
+                    ).all()
 
-        courses = Course.objects.prefetch_related('tags', 'privacy__shared_with').select_related('privacy').filter(id__in=courses_ids)
-
-        courses = self.paginate_queryset(courses, request, view=self)
-
-        serializer = CourseSerializer(courses, many=True, context={'request':request})
+        enrolled_courses = self.paginate_queryset(enrolled_courses, request, view=self)
+        serializer = CourseSerializer(enrolled_courses, many=True, context={'request':request})
         return self.get_paginated_response(serializer.data)
+
+class DeactivateUserView(APIView):
+
+    def get(self, request, user_id):
+        request.user.deactivate()
+        return Response(success_response("account_deactivated"), status=status.HTTP_200_OK)
+
+class UserScreenShotRecordView(APIView):
+    def get(self, request, user_id):
+        user = request.user
+        user.record_a_screenshot()
+        response = {
+        "is_blocked": user.is_reached_screenshots_limit
+        }
+        return Response(response, status=status.HTTP_200_OK)
 
 class AnonymousToken(APIView):
 
@@ -221,9 +240,14 @@ class AnonymousToken(APIView):
     permission_classes = ()
 
     def get(self, request):
+
         anonymous_user = User.get_or_create_anonymous_user()
         token, created = Token.objects.get_or_create(user=anonymous_user)
+        encoded_token = encode_data({
+                "id": anonymous_user.id
+            })
         response = {
             'token': token.key,
+            'encoded_token': encoded_token
         }
         return Response(response, status=status.HTTP_200_OK)

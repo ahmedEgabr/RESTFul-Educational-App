@@ -328,7 +328,7 @@ Example:
 Request body:
 
       {
-          "comment_body": "Nice"
+          "body": "Nice"
       }
 
 ------------------------------
@@ -352,7 +352,7 @@ Example:
 Request body:
 
       {
-          "comment_body": "Nice"
+          "body": "Nice"
       }
 
 ------------------------------

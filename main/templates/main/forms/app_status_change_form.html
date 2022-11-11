@@ -1,0 +1,107 @@
+{% extends "admin/change_form.html" %}
+{% load static %}
+{{inline_admin_formset}}
+{% block admin_change_form_document_ready %}
+{{ block.super }}
+<script src="{% static 'courses/js/jquery-3.3.1.min.js' %}"></script>
+<script>
+   
+   var IsOnline = $("#id_is_online")
+   var IsUnderMaintenance = django.jQuery("#id_is_under_maintenance")
+   var reason = django.jQuery("#id_reason")
+   var downTimeTill = django.jQuery(".field-downtime_till")
+
+   function hideIsOnline(){
+        IsOnline.parent().parent().parent().hide()
+        IsOnline.attr("disabled", "disabled")
+   }
+
+   function showIsOnline(){
+        IsOnline.parent().parent().parent().show()
+        IsOnline.attr("disabled", null)
+    }
+
+    function hideIsUnderMaintenance(){
+        IsUnderMaintenance.parent().parent().parent().hide()
+        IsUnderMaintenance.attr("disabled", "disabled")
+   }
+
+    function showIsUnderMaintenance(){
+        IsUnderMaintenance.parent().parent().parent().show()
+        IsUnderMaintenance.attr("disabled", null)
+    }
+
+    function hideReason(){
+        reason.parent().parent().parent().hide()
+        reason.attr("disabled", "disabled")
+   }
+
+    function showReason(){
+        reason.parent().parent().parent().show()
+        reason.attr("disabled", null)
+    }
+
+    function hideDowntimeTill(){
+        downTimeTill.hide()
+        downTimeTill.attr("disabled", "disabled")
+   }
+
+    function showDowntimeTill(){
+        downTimeTill.show()
+        downTimeTill.attr("disabled", null)
+    }
+
+   django.jQuery("#id_is_under_maintenance").click(function(){
+      
+      if(IsUnderMaintenance.is(':checked')){
+        hideIsOnline()
+        showReason()
+        showDowntimeTill()
+      }else{
+        showIsOnline()
+        hideDowntimeTill()
+        hideReason()
+      }
+
+    })
+
+    django.jQuery("#id_is_online").click(function(){
+      
+        if(IsOnline.is(':checked')){
+            hideIsUnderMaintenance()
+            hideDowntimeTill()
+            hideReason()
+        }else{
+            showIsUnderMaintenance()
+        }
+  
+      })
+
+   function initiatePermissionTab(){
+
+      if(IsOnline.is(':checked')){
+        hideIsUnderMaintenance()
+        hideDowntimeTill()
+        hideReason()
+        showIsOnline()
+      }else if(IsUnderMaintenance.is(':checked')){
+        hideIsOnline()
+        showIsUnderMaintenance()
+        showReason()
+        showDowntimeTill()
+      }
+      else{
+        showIsUnderMaintenance()
+        showIsOnline()
+        hideDowntimeTill()
+        hideReason()
+      }
+
+   }
+
+   django.jQuery(document).ready(function(){
+      initiatePermissionTab()
+})
+</script>
+
+{% endblock %}

@@ -21,6 +21,8 @@ from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from django.conf import settings
 from alteby.error_views import *
+from django.conf.urls.static import static
+from .admin_sites import teacher_admin, main_admin, promoter_admin
 
 schema_view = get_schema_view(
    openapi.Info(
@@ -36,7 +38,10 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('admin/', main_admin.urls),
+    path("teacher/", teacher_admin.urls),
+    path("promoter/", promoter_admin.urls),
+    path('ckeditor/', include('ckeditor_uploader.urls')),
 
     # Main
     path('main', include('main.urls', 'main')),
@@ -73,17 +78,18 @@ if settings.DEBUG:
     urlpatterns += [
     # Debug tool Bar
     path('__debug__/', include(debug_toolbar.urls)),
+    # path('silk/', include('silk.urls', namespace='silk')),
     re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
 
     # Swagger
     re_path(r'^$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     re_path(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
-    ]
+    ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 
-admin.site.index_title = settings.SITE_INDEX_TITLE
-admin.site.site_title = settings.SITE_TITLE
-admin.site.site_header = settings.SITE_HEADER
+main_admin.index_title = settings.SITE_INDEX_TITLE
+main_admin.site_title = settings.SITE_TITLE
+main_admin.site_header = settings.SITE_HEADER
 
 
 # Errors Handlers
